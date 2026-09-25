@@ -72,6 +72,45 @@ import {
   MetaNudgeBudget, META_NUDGE_BLOCK, SwarmHookPipeline, createSwarmBuiltinPipeline, type HookTask,
 } from "../../lib/runtime/swarm-builtin-hooks.ts";
 import { resetReminderSequences } from "../../lib/policy/swarm-annoyance-nudge.ts";
+import { AUTOGEN_BUDGET_SOURCE } from "../../lib/runtime/swarm-builtin-hooks.ts";
+import { AutoSkillManager } from "../../../packages/context/autogenskills/src/index.ts";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+describe("unified skill-budget recovery", () => {
+  it.each(["Bash", "bash"])("charges %s even for read-only commands and refills only on a successful Skill", name => {
+    const previous = (globalThis as any)[AUTOGEN_BUDGET_SOURCE];
+    const manager = new AutoSkillManager({ mode: "auto", dir: mkdtempSync(join(tmpdir(), "budget-ux-")), toolCallBudget: 2, workingBudget: 3, modelContext: false });
+    (globalThis as any)[AUTOGEN_BUDGET_SOURCE] = manager;
+    try {
+      const tasks: HookTask[] = [{ id: "1", subject: "work", status: "in_progress", active: true }];
+      const p = createSwarmBuiltinPipeline({ session: `unified-${name}`, tasks: () => tasks, completion: { enabled: false } });
+      manager.observeTool(true, "TaskManage", { operations: [{ status: "in_progress", active: true }] }, "focus");
+      for (let i = 0; i < 2; i++) {
+        const call = { toolName: name, params: { command: "git status" } };
+        expect(p.preTool(call).block).toBeUndefined();
+        manager.observeToolAttempt(name, call.params, `${name}-${i}`);
+        p.postTool({ ...call, failed: false, output: "ok" });
+      }
+      expect(manager.budgetStatus()).toMatchObject({ used: 2, budget: 2 });
+      const blocked = p.preTool({ toolName: name, params: { command: "git status" } }).block ?? "";
+      expect(blocked).toContain("Skill budget exhausted (2/2");
+      expect(manager.gateTool(name, { command: "git status" })?.block).toBe(true);
+      expect(manager.budgetStatus().used).toBe(2);
+      p.postTool({ toolName: "SkillManage", params: { action: "review" }, failed: false, output: "reviewed" });
+      manager.observeTool(true, "SkillManage", { action: "review" }, "review");
+      expect(p.preTool({ toolName: name, params: {} }).block).toContain("2/2");
+      p.postTool({ toolName: "Skill", params: { skill: "missing" }, failed: true, output: "not found" });
+      manager.observeTool(false, "Skill", { skill: "missing" }, "missing");
+      expect(p.preTool({ toolName: name, params: {} }).block).toContain("2/2");
+      p.postTool({ toolName: "Skill", params: { skill: "existing" }, failed: false, output: "instructions" });
+      manager.observeTool(true, "Skill", { skill: "existing" }, "existing");
+      expect(manager.budgetStatus()).toMatchObject({ used: 0, budget: 3, skilled: true });
+      expect(p.preTool({ toolName: name, params: {} }).block).toBeUndefined();
+    } finally { (globalThis as any)[AUTOGEN_BUDGET_SOURCE] = previous; }
+  });
+});
 
 describe("toolclass.go port", () => {
   it("classifies bash commands like IsBashReadOnly (quirks included)", () => {
@@ -303,11 +342,15 @@ describe("headless builtin hook pipeline", () => {
     expect(p.flushTurn()).toBe(posts[3]);
     const fifth = bash("printf 5 > .x && rm .x"); expect(p.preTool(fifth).context).toBe(""); p.postTool(ok(fifth));
     const sixth = p.preTool(bash("printf 6 > .x && rm .x"));
-    expect(sixth.block!.startsWith("Tool 'bash' blocked by hook: <system-reminder source=\"autogenskills-budget-enforcement\" kind=\"block\" seq=\"1\">[SKILL BUDGET ENFORCEMENT — BLOCKED]\n\nYou have used 5 non-exempt tool calls. The onboarding budget is 5.\n")).toBe(true);
-    expect(sixth.block!.endsWith("skill, your budget expands to 90.</system-reminder>")).toBe(true);
+    expect(sixth.block).toContain("This tool did not run. Skill budget exhausted (5/5");
+    expect(sixth.block).toContain("Don't give up or stop the task because of this block.");
+    expect(sixth.block).toContain('call Skill with {"skill":"<relevant available skill>"}');
+    expect(sixth.block).toContain("then invoke the new skill with Skill and continue");
+    expect(sixth.block).toContain("Don't create filler just to bypass this gate");
+    expect(sixth.block).toContain("SkillManage list/view/review/create/patch manages the library; it does not refill");
     expect(p.preTool(bash("printf 7 > .x && rm .x")).block).toContain('seq="2"');
     expect(p.preTool(taskManage([{ key: "b", op: "update", taskId: "1", status: "completed" }])).context).toBe(""); // exempt
-    expect(p.preTool(bash("git status")).context).toBe(""); // read-only exempt, not blocked
+    expect(p.preTool(bash("git status")).block).toContain("Skill budget exhausted"); // Bash always counts
   });
   it("bash-only pre hooks and the annoyance nudge join the same pipeline", () => {
     resetReminderSequences();

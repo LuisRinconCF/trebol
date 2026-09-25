@@ -1,0 +1,29 @@
+{
+  "name": "@pi-swarm/ext-tools",
+  "private": true,
+  "type": "module",
+  "description": "Pi-Swarm extension layer 30-tools: every registerTool surface: bash, fs, search, agents, tasks, schedule, history, vault, research, ask-user, annoyed, codemode. Load order within the layer is this list; layers load in numeric prefix order.",
+  "pi": {
+    "extensions": [
+      "annoyed/index.ts",
+      "codemode.ts",
+      "control-task-tools.ts",
+      "exa-search.ts",
+      "history-search.ts",
+      "ask-user/index.ts",
+      "paseo.ts",
+      "research-tools.ts",
+      "swarm-monitor.ts",
+      "swarm-websearch.ts",
+      "swarm-goal.ts",
+      "swarm-agent-tools.ts",
+      "swarm-background-bash.ts",
+      "swarm-bash.ts",
+      "swarm-fs-tools.ts",
+      "swarm-history-vault-tools.ts",
+      "swarm-search.ts",
+      "taskmanage.ts",
+      "vault.ts"
+    ]
+  }
+}

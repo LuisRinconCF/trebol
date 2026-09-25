@@ -5,6 +5,7 @@
   "pi": {
     "extensions": [
       "autogenskills.ts",
+      "mermaid-response.ts",
       "prompt-context-configure.ts",
       "swarm-plan-mode.ts",
       "swarm-prompt.ts",

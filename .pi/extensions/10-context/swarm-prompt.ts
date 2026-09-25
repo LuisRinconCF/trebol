@@ -25,6 +25,14 @@ export { UPSTREAM_SOURCE, forgeSwarmSystemPrompt, swarmForgeSystemPrompt };
  * apply only to child workers; keep this contract in the main interactive
  * prompt so the root Pi agent receives it directly as well.
  */
+/**
+ * The grounded-Mermaid explanation rule as a standalone constant so every
+ * prompt base (Forge, Pi default, custom, --system-prompt) can carry it.
+ * MAIN_REPORTING_DIRECTIVE interpolates it to keep its assembled bytes
+ * identical to the previous single-string form.
+ */
+export const MERMAID_EXPLANATION_DIRECTIVE = `For a substantive explanation of how a UI component, tool, hook, or workflow works, once its implementation is inspected, include at least one grounded fenced Mermaid diagram in the FIRST complete response. For a footer question, show how its visible rows are composed or updated; put source-only optional segments in a clearly conditional branch, not in the observed row. Use Mermaid node IDs with quoted labels (for example A["Agent starts"] --> B["Update metrics"]), not quoted text as node IDs. Before stopping, check your draft: if you explained a nontrivial flow but omitted a Mermaid fence, add the diagram to that same response rather than relying on a later hook. Use separate diagrams for distinct flows or perspectives when clearer, and explain transitions in prose. Simple factual answers or questions lacking evidence need no diagram; never invent active state or add redundant or speculative diagrams. End with the explanatory walkthrough after outcome and verification, and mark unverified behavior as unknown.`;
+
 export const MAIN_REPORTING_DIRECTIVE = `[REPORTING DIRECTIVE]
 
 # Conversation startup
@@ -41,7 +49,39 @@ For every substantive final response, produce an evidence-based structured repor
 
 Use concise Markdown headings and bullets. Every material claim must have nearby supporting evidence. Never claim completion, success, provider availability, or behavior from an intention, description, compilation result, or agent report alone. If evidence is absent, say "not established" rather than guessing.
 
+# Harness-engineering explanations
+When a question asks how a tool, hook, skill, budget, footer, or other interface works, inspect the actual model-facing contracts, event ordering, state transitions, and user-visible behavior before explaining it. Distinguish descriptions from enforcement and model-visible guidance from TUI-only output. For UI questions, first identify what is visibly present in this session; label features found only in source as optional or conditional, not currently displayed. If the UI cannot be inspected, say so rather than inventing active segments. Explain relevant agent-experience (AX) and user-experience (UX) journeys with nearby evidence, including blocks and recovery.
+
+${MERMAID_EXPLANATION_DIRECTIVE}
+
 [/REPORTING DIRECTIVE]`;
+
+export const TESTING_CONTRACT = `[TESTING CONTRACT]
+Never write or add unit tests. NEVER UNIT TESTS. Add end-to-end tests only. Do not create unit-test files or test isolated functions; verify behavior through end-to-end user-visible flows.
+[/TESTING CONTRACT]`;
+
+/** Kept late in the assembled Forge prompt so the first-answer check is not buried by delegation guidance. */
+export const FIRST_RESPONSE_EXPLANATION_CHECK = `[FIRST RESPONSE EXPLANATION CHECK]
+Before ending a substantive answer about how a repository UI element, tool, hook, or workflow works: did you inspect the implementation, distinguish what is visible now from what is only conditionally available, and include a useful fenced Mermaid flowchart or sequence diagram in THIS answer? If the evidence supports a diagram and one is missing, write it now instead of depending on a post-response follow-up. For footer questions, diagram the observed identity and metrics rows and show optional segments only as conditional. Use node IDs with quoted labels, e.g. A["Input"] --> B["Footer"], not "Input" --> "Footer". Do not diagram a mechanism you could not verify, and skip diagrams for brief factual answers.
+[/FIRST RESPONSE EXPLANATION CHECK]`;
+
+/** The per-request nudge is colocated with the user prompt, not buried in a long static Forge prompt. */
+export const FOOTER_EXPLANATION_PROMPT = "For this footer explanation, inspect the Pi-Swarm footer owner at .pi/extensions/50-ui/conversation-metrics.ts. Explain the identity and metrics rows actually visible in this session; label source-only segments and expanded modes as conditional. In your FIRST complete answer, include a concise fenced Mermaid diagram of the verified footer composition or update path. Syntax: use node IDs with quoted labels, e.g. A[\"Input\"] --> B[\"Footer\"], not \"Input\" --> \"Footer\"; explain its transitions in prose. Do not wait for a post-response hook or invent active segments.";
+export const footerExplanationRequested = (prompt: string): boolean => /\bfooter\b/i.test(prompt) && /\b(?:explain|how|works|each|means|understand)\b/i.test(prompt);
+
+/**
+ * Append the grounded-Mermaid explanation directives to ANY base prompt.
+ * The Forge assembly already places them mid-prompt; Pi-default, custom, and
+ * --system-prompt bases previously omitted them entirely. Idempotent by
+ * marker so lifecycle passes that see an already-assembled prompt never
+ * duplicate either directive.
+ */
+export function withMermaidRequirement(prompt: string): string {
+  let out = prompt;
+  if (!out.includes("include at least one grounded fenced Mermaid diagram")) out += `\n\n${MERMAID_EXPLANATION_DIRECTIVE}`;
+  if (!out.includes("FIRST RESPONSE EXPLANATION CHECK")) out += `\n\n${FIRST_RESPONSE_EXPLANATION_CHECK}`;
+  return out;
+}
 
 /**
  * The assembled prompt carries no Pi-specific marker (Swarm's prompt has
@@ -323,6 +363,10 @@ export function assembleForgePrompt(_base: string, options: PromptAssemblyOption
   const sections: string[] = [];
   const add = (section: string, content: string, origin: string, ref = "", raw = false) => { const value = raw ? content : clean(content); if (!value) return; sections.push(value); provenance.push({ section, origin, ref, hash: hash(value), bytes: Buffer.byteLength(value) }); };
   if (options.interactive || options.headlessForge === true) {
+    // This contract must be byte-first: the Forge prompt is delivered to the
+    // model with this instruction before workspace or canonical prompt text.
+    sections.push(TESTING_CONTRACT);
+    provenance.push({ section: "testing-contract", origin: "runtime", ref: "pi-swarm-testing-contract", hash: hash(TESTING_CONTRACT), bytes: Buffer.byteLength(TESTING_CONTRACT) });
     add("workspace", renderWorkspaceContext(workspace), "runtime", "workspace", true);
     // Adapt upstream workflow wording and place the
     // root-agent reporting contract between them. Child-worker reporting rules
@@ -339,8 +383,11 @@ export function assembleForgePrompt(_base: string, options: PromptAssemblyOption
     add("forge", applyWorkflowGuidance(transparentForgePrompt), "forge", `${UPSTREAM_SOURCE}#forgeSwarmSystemPrompt`, true);
     add("reporting", MAIN_REPORTING_DIRECTIVE, "runtime", "pi-swarm-main-reporting-directive", true);
     add("delegation", applyWorkflowGuidance(swarmForgeDelegationAddendum), "forge", `${UPSTREAM_SOURCE}#swarmForgeDelegationAddendum`, true);
+    add("response-check", FIRST_RESPONSE_EXPLANATION_CHECK, "runtime", "pi-swarm-first-response-explanation-check", true);
   } else {
     add("headless", headlessBasePrompt(options.autogenSkills ?? [], options.autogenEnabled ?? autogenMode(root) !== "never"), "runtime", "sdk_integration_provider.go+autogenskills/guidance.go", true);
+    add("mermaid-explanation", MERMAID_EXPLANATION_DIRECTIVE, "runtime", "pi-swarm-mermaid-explanation-directive", true);
+    add("response-check", FIRST_RESPONSE_EXPLANATION_CHECK, "runtime", "pi-swarm-first-response-explanation-check", true);
   }
   add("user", options.userPrompt || "", "configuration", "userPrompt");
 
@@ -456,7 +503,7 @@ export function registerSwarmPrompt(pi: PromptExtensionAPI): void {
       // skills (prepend, no separator) and context injection on top of it.
       const enabled = isolation.noContextFiles ? Object.fromEntries(PROJECT_MEMORY_SOURCES.map((id) => [id, false])) : undefined;
       const base = injectSwarmContext(isolation.systemPrompt, { workDir: cwd, enabled, files: config.context?.files });
-      return { systemPrompt: withSkillCatalog(base, catalogFor()) };
+      return { systemPrompt: withSkillCatalog(withMermaidRequirement(base), catalogFor()) };
     }
     const selected = resolveActiveSystemPrompt(cwd);
     const catalog = catalogFor();
@@ -473,7 +520,7 @@ export function registerSwarmPrompt(pi: PromptExtensionAPI): void {
     if (selectedBase !== undefined) {
       const enabled = isolation.noContextFiles ? Object.fromEntries(PROJECT_MEMORY_SOURCES.map((id) => [id, false])) : config.context?.enabledSources;
       const base = injectSwarmContext(selectedBase, { workDir: cwd, enabled, files: isolation.noContextFiles ? undefined : config.context?.files });
-      return { systemPrompt: withSkillCatalog(base, catalog) };
+      return { systemPrompt: withSkillCatalog(withMermaidRequirement(base), catalog) };
     }
     // Already assembled by another prompt layer: keep its content intact.
     // Re-running catalog assembly here is not idempotent because the skill
@@ -494,7 +541,12 @@ export function registerSwarmPrompt(pi: PromptExtensionAPI): void {
     const base = assembled?.systemPrompt ?? event.systemPrompt;
     const final = memorySystemPrompt(base, cwd);
     if (assembled) assembledPromptKinds.set(hash(final), (ctx as { hasUI?: boolean }).hasUI === true ? "interactive" : "headless");
-    return assembled || final !== base ? { systemPrompt: final } : undefined;
+    const result = assembled || final !== base ? { systemPrompt: final } : undefined;
+    if (footerExplanationRequested(String(event.prompt ?? "")) && selectedBaseIsForge(cwd)) {
+      return { ...(result ?? {}), message: { customType: "pi-swarm-footer-explanation-guidance", content: FOOTER_EXPLANATION_PROMPT, display: false } };
+    }
+    return result;
   });
 }
+function selectedBaseIsForge(cwd: string): boolean { return resolveActiveSystemPrompt(cwd).kind === "forge" && cliIsolation().systemPrompt === undefined; }
 export default function swarmPromptExtension(pi: PromptExtensionAPI): void { registerSwarmPrompt(pi); }

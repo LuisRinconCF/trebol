@@ -1,5 +1,6 @@
 import { registerSupervisorBudget } from "../../lib/context/supervisor-live-state.ts";
 import { registerAutoSkills, type Config } from "../../../packages/context/autogenskills/src/index.ts";
+import { AUTOGEN_BUDGET_SOURCE } from "../../lib/runtime/swarm-builtin-hooks.ts";
 import { fileURLToPath } from "node:url";
 import { join, resolve } from "node:path";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
@@ -90,6 +91,7 @@ export function registerAutoSkillsExtension(pi: any, options: AutoSkillsExtensio
       return { skill: skill.name, version: skill.source === "autogen" ? "autogen" : "external", path: skill.filePath, instructions: skill.instructions, text: skill.text };
     },
   });
+  (globalThis as any)[AUTOGEN_BUDGET_SOURCE] = manager;
   pi.on("session_start", (_event:unknown,ctx:any)=>registerSupervisorBudget(ctx,()=>manager.budgetStatus()));
   pi.on("session_switch", (_event:unknown,ctx:any)=>registerSupervisorBudget(ctx,()=>manager.budgetStatus()));
   return manager;

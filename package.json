@@ -32,8 +32,10 @@
     "packages/*/*"
   ],
   "dependencies": {
-    "typescript": "^5.9.0",
-    "@types/node": "^22.0.0"
+    "@types/node": "^22.0.0",
+    "mermaid": "^11.12.3",
+    "re2-wasm": "1.0.2",
+    "typescript": "^5.9.0"
   },
   "devDependencies": {
     "@types/pg": "^8.23.1",

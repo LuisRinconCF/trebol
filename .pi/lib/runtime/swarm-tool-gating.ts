@@ -5,16 +5,11 @@
  *  - ask_user_question          only when a QuestionBroker exists (interactive TUI)
  *  - enter_plan_mode/exit_plan_mode only when a PlanBroker exists (interactive TUI)
  *  - Bash + ReadBackgroundCommand instead of bash when a BackgroundProcessManager exists (interactive TUI)
- *  - x_search / xai_web_search  only when xAI credentials resolve:
- *        ~/.swarm/config/oauth/xai.json token (unexpired or refreshable)
- *        or XAI_API_KEY set
  *
  * Anything Pi registers beyond this list is Pi-only and is hidden from the
  * model surface unless it is required by the active global policy below,
  * explicitly configured, or PI_SWARM_TOOL_SURFACE=all.
  */
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { swarmToolNames } from "./swarm-tool-surface.ts";
 
 export const INTERACTIVE_ONLY_TOOLS = ["ask_user_question", "enter_plan_mode", "exit_plan_mode", "Bash", "ReadBackgroundCommand"] as const;
@@ -24,7 +19,6 @@ export const INTERACTIVE_ONLY_TOOLS = ["ask_user_question", "enter_plan_mode", "
  * `bash` tool; headless mode has no manager and registers `bash`.
  */
 export const HEADLESS_ONLY_TOOLS = ["bash"] as const;
-export const XAI_TOOLS = ["x_search", "xai_web_search"] as const;
 /** Global Pi policy requires this tool before mutations such as apply_patch. */
 export const REQUIRED_PI_EXTENSION_TOOLS = ["change_context", "context_index", "context_remember", "context_reindex", "context_search", "context_outline", "context_read", "context_inspect", "context_delete"] as const;
 
@@ -47,24 +41,6 @@ export function configuredExtraTools(env: NodeJS.ProcessEnv = process.env): Set<
   );
 }
 
-/** True when an unexpired (or refreshable) xAI token or XAI_API_KEY is present. */
-export function xaiHasCredentials(home = process.env.HOME ?? "", env = process.env, now = () => Date.now()): boolean {
-  // paths.OAuthFile("xai") → <SWARM_HOME or ~/.swarm>/config/oauth/xai.json
-  const file = join(env.SWARM_HOME || join(home, ".swarm"), "config", "oauth", "xai.json");
-  if (existsSync(file)) {
-    try {
-      const token = JSON.parse(readFileSync(file, "utf8"))?.token;
-      if (token && typeof token === "object") {
-        const expiresAt = Number(token.expires_at ?? 0);
-        const expired = expiresAt !== 0 && Math.floor(now() / 1000) > expiresAt - 60;
-        if (!expired) return true;
-        if (typeof token.refresh_token === "string" && token.refresh_token !== "") return true;
-      }
-    } catch { /* unreadable config counts as absent */ }
-  }
-  return (env.XAI_API_KEY ?? "").trim() !== "";
-}
-
 /** The set of tool names Swarm would register in this environment. */
 export function swarmSurfaceFor(environment: GatingEnvironment): Set<string> {
   const names = new Set<string>(swarmToolNames());
@@ -85,7 +61,6 @@ export function swarmSurfaceFor(environment: GatingEnvironment): Set<string> {
     for (const name of INTERACTIVE_ONLY_TOOLS) names.add(name);
     for (const name of HEADLESS_ONLY_TOOLS) names.delete(name);
   }
-  if (xaiHasCredentials(environment.home, environment.env, environment.now)) for (const name of XAI_TOOLS) names.add(name);
   for (const name of REQUIRED_PI_EXTENSION_TOOLS) names.add(name);
   for (const name of configuredExtraTools(environment.env)) names.add(name);
   return names;

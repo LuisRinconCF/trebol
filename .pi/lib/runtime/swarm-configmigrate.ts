@@ -8,7 +8,7 @@
  * `~/.swarm/skills/**` (dest wins), and under Swarm's last-root-wins skill
  * discovery the `~/.swarm` copy is the one whose absolute path reaches the
  * model in `<location>`. OAuth files migrate to `config/oauth/<provider>.json`,
- * which gates x_search / xai_web_search. Everything else is carried too so
+ * carrying provider credentials. Everything else is carried too so
  * the on-disk state Pi leaves behind is the state Swarm would leave behind.
  *
  * Semantics mirrored exactly: marker `config/.migrated_from_swarmos` short-
