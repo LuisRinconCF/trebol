@@ -54,10 +54,29 @@ export function frameDivider(width: number, label?: string, labelColor?: (text: 
   const inner = Math.max(1, width - 2);
   if (!label) return `├${"─".repeat(inner)}┤`;
   const visible = `── ${label} `;
-  const fill = Math.max(0, inner - visible.length);
+  const fill = Math.max(0, inner - visibleCellWidth(visible));
   const styled = labelColor ? labelColor(label) : label;
   return `├${"─".repeat(2)} ${styled} ${"─".repeat(fill)}┤`;
 }
+
+/**
+ * Hard-clip a row to `cells` visible cells. ANSI escape sequences carry no
+ * width but would corrupt a per-character clip, so the row is stripped to its
+ * plain text first: overflowing rows lose color rather than emitting a
+ * dangling escape sequence.
+ */
+const clipToWidth = (row: string, cells: number): string => {
+  const plain = stripANSI(row);
+  if (visibleCellWidth(plain) <= cells) return plain;
+  let out = "", used = 0;
+  for (const ch of plain) {
+    const w = visibleCellWidth(ch);
+    if (used + w > cells) break;
+    out += ch;
+    used += w;
+  }
+  return out;
+};
 
 /** Pad a (possibly ANSI-colored) row to exactly `inner` visible cells. */
 const padRow = (row: string, inner: number): string => row + " ".repeat(Math.max(0, inner - visibleCellWidth(row)));
@@ -74,7 +93,7 @@ export function framedCard(sections: FrameSection[], width: number, options: Fra
   // Below that, degrade to the bare (clipped) content rows so every row still
   // respects the terminal width guard.
   if (width < 7) {
-    return sections.flatMap((s) => s.rows.flatMap((r) => r.split("\n"))).map((r) => r.length > width ? Array.from(r).slice(0, width).join("") : r);
+    return sections.flatMap((s) => s.rows.flatMap((r) => r.split("\n"))).map((r) => clipToWidth(r, width));
   }
   const inner = Math.max(1, width - 4);
   const rows: string[] = [`╭${"─".repeat(Math.max(1, width - 2))}╮`];
@@ -82,13 +101,7 @@ export function framedCard(sections: FrameSection[], width: number, options: Fra
     if (section.label !== undefined) rows.push(frameDivider(width, section.label, options.labelColor));
     for (const row of section.rows) {
       for (const piece of row.split("\n")) {
-        const clipped = piece.length > inner && visibleCellWidth(piece) > inner
-          ? Array.from(piece).reduce((acc: { text: string; cells: number }, ch) => {
-              const next = acc.cells + visibleCellWidth(ch);
-              return next > inner ? acc : { text: acc.text + ch, cells: next };
-            }, { text: "", cells: 0 }).text
-          : piece;
-        rows.push(`│ ${padRow(clipped, inner)} │`);
+        rows.push(`│ ${padRow(clipToWidth(piece, inner), inner)} │`);
       }
     }
   }

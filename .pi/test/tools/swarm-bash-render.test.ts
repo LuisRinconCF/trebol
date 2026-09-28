@@ -304,3 +304,14 @@ describe("framed bash result card", () => {
     }
   });
 });
+
+describe("framed result card under a styling theme", () => {
+  it("keeps exactly one command prompt in the header when theme colors wrap text", () => {
+    const styled = { fg: (k: string, s: string) => `\x1b[3${k === "error" ? 1 : k === "muted" ? 2 : 6}m${s}\x1b[0m`, bold: (s: string) => `\x1b[1m${s}\x1b[0m` };
+    const result = { content: [{ type: "text", text: buildResultXML({ exitCode: 0, durationMs: 10, stdout: "ok", stderr: "", timedOut: false, requestedSecs: 90, effectiveSecs: 90 }) }], details: { exit_code: 0, duration_ms: 10, timed_out: false, timeout_seconds: 90, command: "npm test" } };
+    const rows = bashResultCardComponent(result, {}, styled).render(80);
+    expect(rows.join("\n")).not.toMatch(/\$ \$|\$\x1b|\$\$ /);
+    expect(rows.join("\n")).toContain("npm test");
+    for (const row of rows) expect(visibleWidth(row)).toBeLessThanOrEqual(80);
+  });
+});
