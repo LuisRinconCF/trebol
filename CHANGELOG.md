@@ -8,6 +8,7 @@ Release metadata is kept in `package.json`, `update-manifest.json`, and this fil
 - Improve history search resource handling and matching; refine tool gating and lifecycle behavior.
 - Add renderer audit and capture tooling, documentation, and cleanup of accidentally tracked build/debug artifacts.
 - Update task-management contracts and validation guidance.
+- Check out submodules in the CI build-and-test job so the import-resolution check sees pinned vendor sources.
 
 ## [0.4.0] - 2026-09-23
 
