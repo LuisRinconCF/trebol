@@ -4,6 +4,8 @@ Release metadata is kept in `package.json`, `update-manifest.json`, and this fil
 
 ## [Unreleased]
 
+- Redesign the interactive Bash tool card to the Oh My Pi-style framed layout: framed call card, status header with success/error/timeout icons, labeled Output section with the same tail-window collapse, and a dim Wall/Timeout/Exit stats line.
+- Add the reusable framed-card drawing helper for tool cards and let `renderShell: "self"` tools own their own collapse in the default renderer wrapper.
 - Add a dedicated Read tool renderer (image-aware result summary and call card) and register it with the Read tool.
 - Correct stale validation and parity documentation in AGENTS.md (removed `test:parity`/`parity:probe` references, fixed global-install import notes).
 - Document global `pi install` usage in the README.

@@ -8,6 +8,8 @@ import {
   formatBashCall,
   normalizeBashParams,
   stripANSI,
+  bashCallCardComponent,
+  bashResultCardComponent,
 } from "../../lib/tools/swarm-bash.ts";
 
 // pi-tui is only resolvable inside the live pi runtime, so these tests exercise
@@ -207,5 +209,98 @@ describe("bash result collapse/expand toggling", () => {
     const small = buildResultXML({ exitCode: 0, durationMs: 10, stdout: "a\nb", stderr: "", timedOut: false, requestedSecs: 60, effectiveSecs: 60 });
     const short = { content: [{ type: "text", text: small }], details: { command: "x", duration_ms: 10 } };
     expect(bashResultComponent(short, {}, theme).render(80)).toEqual(bashResultComponent(short, { expanded: true }, theme).render(80));
+  });
+});
+
+describe("framed bash call card", () => {
+  it("frames the styled command row at every width", () => {
+    for (const width of WIDTHS) {
+      const rows = bashCallCardComponent({ command: "npm run build", timeout_seconds: 90 }, theme, truncate).render(width);
+      expect(rows[0]).toMatch(/^╭─+╮$/u);
+      expect(rows.at(-1)).toMatch(/^╰─+╯$/u);
+      expect(rows).toHaveLength(3);
+      for (const row of rows) expect(visibleWidth(row)).toBe(width);
+      expect(rows[1]).toContain("$ npm run build");
+      if (width >= 40) expect(rows[1]).toContain("timeout 90s");
+    }
+  });
+
+  it("bounds long commands and marks multi-line commands", () => {
+    const long = bashCallCardComponent({ command: "echo " + "x".repeat(200) }, theme, truncate).render(40);
+    for (const row of long) expect(visibleWidth(row)).toBe(40);
+    expect(long[1]).toContain("…");
+    for (const row of long) expect(visibleWidth(row)).toBe(40);
+    const multi = bashCallCardComponent({ command: "cat <<EOF\nhi\nEOF" }, theme, truncate).render(80);
+    expect(multi[1]).toContain("⏎…");
+  });
+
+  it("degenerate widths still render one clean row", () => {
+    expect(bashCallCardComponent({ command: "ls" }, theme, truncate).render(0)).toEqual([""]);
+    for (const width of [1, 5]) {
+      for (const row of bashCallCardComponent({ command: "ls" }, theme, truncate).render(width)) expect(visibleWidth(row)).toBeLessThanOrEqual(width);
+    }
+  });
+});
+
+describe("framed bash result card", () => {
+  const resultFor = (exitCode: number, durationMs = 400, timedOut = false, timeoutSeconds = 90, extra: any = {}) => ({
+    content: [{ type: "text", text: buildResultXML({ exitCode, durationMs, stdout: "line-1\nline-2", stderr: "", timedOut, requestedSecs: timeoutSeconds, effectiveSecs: timeoutSeconds }) }],
+    details: { exit_code: exitCode, duration_ms: durationMs, timed_out: timedOut, timeout_seconds: timeoutSeconds, command: "make test", ...extra },
+  });
+
+  it("renders the success header, Output section, and stats inside the frame", () => {
+    const rows = bashResultCardComponent(resultFor(0), {}, theme).render(80);
+    expect(rows[0]).toMatch(/^╭/u);
+    expect(rows.at(-1)).toMatch(/^╰/u);
+    expect(rows.join("\n")).toContain("✓ bash · $ make test");
+    expect(rows.join("\n")).toContain("── Output ");
+    expect(rows.join("\n")).toContain("line-2");
+    expect(rows.join("\n")).toContain("[Wall: 0.4s | Timeout: 90s | Exit: 0]");
+  });
+
+  it("keeps the tail and the expansion hint when collapsed, drops the hint when expanded", () => {
+    const many = Array.from({ length: 20 }, (_, i) => `line-${i + 1}`).join("\n");
+    const result = {
+      content: [{ type: "text", text: buildResultXML({ exitCode: 0, durationMs: 10, stdout: many, stderr: "", timedOut: false, requestedSecs: 90, effectiveSecs: 90 }) }],
+      details: { exit_code: 0, duration_ms: 10, timed_out: false, timeout_seconds: 90, command: "seq 20" },
+
+    };
+    const collapsed = bashResultCardComponent(result, {}, theme).render(80).join("\n");
+    expect(collapsed).toContain(`(${20 - BASH_PREVIEW_LINES} earlier lines, ctrl+o to expand)`);
+    expect(collapsed).toContain("line-20");
+    expect(collapsed).not.toContain("line-15");
+    const expanded = bashResultCardComponent(result, { expanded: true }, theme).render(80).join("\n");
+    expect(expanded).not.toContain("earlier lines");
+    expect(expanded).toContain("line-1");
+  });
+
+  it("marks errors and timeouts with their header icon and stats", () => {
+    const failed = bashResultCardComponent({ content: [{ type: "text", text: "Error executing bash: Command exited with code 2" }], details: { exit_code: 2, duration_ms: 1200, timed_out: false, timeout_seconds: 90, command: "false" } }, { isError: true }, theme).render(80).join("\n");
+    expect(failed).toContain("✗ bash · $ false");
+    expect(failed).toContain("Command exited with code 2");
+    expect(failed).toContain("[Wall: 1.2s | Timeout: 90s | Exit: 2]");
+    const timedOut = bashResultCardComponent({ content: [{ type: "text", text: "Error executing bash: command timed out after 90s" }], details: { exit_code: -1, duration_ms: 90_000, timed_out: true, timeout_seconds: 90, command: "sleep 200" } }, { isError: true }, theme).render(80).join("\n");
+    expect(timedOut).toContain("⚠ bash · $ sleep 200");
+    expect(timedOut).toContain("| Exit: timeout]");
+  });
+
+  it("shows the running state without stats while partial", () => {
+    const rows = bashResultCardComponent({ content: [{ type: "text", text: "working" }], details: { command: "sleep 5" } }, { isPartial: true }, theme).render(60);
+    expect(rows.join("\n")).toContain("· bash · $ sleep 5");
+    expect(rows.join("\n")).toContain("running · ctrl+b to background");
+    expect(rows.join("\n")).not.toContain("[Wall:");
+  });
+
+  it("handles no output, missing details, and degenerate widths", () => {
+    const empty = bashResultCardComponent({ content: [{ type: "text", text: buildResultXML({ exitCode: 0, durationMs: 10, stdout: "", stderr: "", timedOut: false, requestedSecs: 90, effectiveSecs: 90 }) }], details: { exit_code: 0, duration_ms: 10, timed_out: false, timeout_seconds: 90, command: "true" } }, {}, theme).render(80).join("\n");
+    expect(empty).toContain("(no output)");
+    const bare = bashResultCardComponent({ content: [{ type: "text", text: "plain prose error" }] }, { isError: true }, theme).render(80).join("\n");
+    expect(bare).toContain("✗ bash · $ ...");
+    // no details → no duration → no stats row
+    expect(bare).not.toContain("[Wall:");
+    expect(bashResultCardComponent({ content: [{ type: "text", text: "x" }] }, {}, theme).render(0)).toEqual([""]);
+    for (const width of WIDTHS) {
+      for (const row of bashResultCardComponent(resultFor(0), {}, theme).render(width)) expect(visibleWidth(row)).toBeLessThanOrEqual(width);
+    }
   });
 });
