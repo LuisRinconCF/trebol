@@ -8,7 +8,7 @@
  * through `withDefaultToolRenderer`, which is what those tools actually get
  * today — that is precisely the comparison the audit needs.
  */
-import { bashCallComponent, bashResultComponent, formatBashCall } from "../../../.pi/lib/tools/swarm-bash.ts";
+import { bashCallCardComponent, bashResultCardComponent } from "../../../.pi/lib/tools/swarm-bash.ts";
 import { withDefaultToolRenderer } from "../../../packages/runtime/core/src/tool-renderer.ts";
 import { type Fixture, fixtures, widths } from "./fixtures.ts";
 
@@ -65,13 +65,13 @@ for (const fixture of fixtures) {
         // Only bash has a call renderer; the generic adapter adds none, so a
         // call card simply does not exist for the other families.
         const lines = dedicated
-          ? bashCallComponent(formatBashCall(fixture.args as any, theme), undefined).render(width)
+          ? bashCallCardComponent(fixture.args as any, theme).render(width)
           : [];
         captures.push({ id: fixture.id, width, phase: "call", lines, renderer: dedicated ? "swarm-bash" : "none" });
         continue;
       }
       const component = dedicated
-        ? bashResultComponent(swarmResult(fixture), options, theme, wrap)
+        ? bashResultCardComponent(swarmResult(fixture), options, theme, wrap)
         : fallback.renderResult(swarmResult(fixture), options, theme);
       captures.push({
         id: fixture.id,

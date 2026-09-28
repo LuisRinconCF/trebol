@@ -35,3 +35,16 @@ describe("default tool renderer", () => {
     expect(tool.renderResult({ content: [{ type: "text", text: "x".repeat(25_000) }] }, {}, {}).render(80).join("\n")).toContain("display truncated");
   });
 });
+
+describe("self-shell tools bypass the default renderer wrapper", () => {
+  it("returns a renderShell self tool unchanged even with a defined renderResult", () => {
+    const own = { render: () => ["framed"] };
+    const tool = { name: "bash", renderShell: "self" as const, renderResult: () => own };
+    expect(withDefaultToolRenderer(tool)).toBe(tool);
+  });
+
+  it("returns a renderShell self tool without renderResult unchanged (no fallback injected)", () => {
+    const tool = { name: "bash", renderShell: "self" as const };
+    expect(withDefaultToolRenderer(tool)).toBe(tool);
+  });
+});
