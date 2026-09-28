@@ -181,6 +181,20 @@ context files are discovered:
 pi
 ```
 
+### Global installation
+
+The repository is also a Pi package. Install the checkout globally (the
+default scope; do not pass `-l`) with:
+
+```bash
+pi install https://github.com/cloverinternational/trebol
+```
+
+For a local checkout, run `pi install /absolute/path/to/trebol`. Pi adds the
+source to user settings, making the extensions available from other projects.
+The package's `prepare` script builds runtime dependencies during installation.
+To remove the global package, run `pi remove <the-same-source>`.
+
 ## Usage
 
 Type these commands **inside Pi** (not in a shell). Begin with `/help` for Pi's
