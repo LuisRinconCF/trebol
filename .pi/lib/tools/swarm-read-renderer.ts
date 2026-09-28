@@ -5,9 +5,12 @@ function textComponent(value: string) {
     render(width: number): string[] {
       if (width <= 0) return [""];
       return value.split("\n").flatMap((line) => {
-        if (line.length <= width) return [line];
+        // Code-point-aware chunking: slicing by UTF-16 code units can split
+        // surrogate pairs (emoji, non-BMP characters in paths/messages).
+        const chars = Array.from(line);
+        if (chars.length <= width) return [line];
         const rows: string[] = [];
-        for (let i = 0; i < line.length; i += width) rows.push(line.slice(i, i + width));
+        for (let i = 0; i < chars.length; i += width) rows.push(chars.slice(i, i + width).join(""));
         return rows;
       });
     },
@@ -57,7 +60,15 @@ function resultText(result: any, options: any, theme: any): string {
   else if (!images.length && !failed) rows.push(theme?.fg?.("muted", "No image content returned") ?? "No image content returned");
   // Read's successful payload is an image, not line-oriented text. Do not
   // truncate it or pretend offset/limit selects image lines; preserve messages.
-  if (options?.expanded && result?.details !== undefined) rows.push(JSON.stringify(result.details, null, 2));
+  if (options?.expanded && result?.details !== undefined) {
+    // details is arbitrary tool output; never let a circular structure or a
+    // throwing toJSON crash the renderer.
+    try {
+      rows.push(JSON.stringify(result.details, null, 2));
+    } catch {
+      rows.push("(details could not be serialized)");
+    }
+  }
   return rows.join("\n");
 }
 

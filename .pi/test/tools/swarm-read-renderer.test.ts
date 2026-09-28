@@ -48,4 +48,20 @@ describe("Read tool renderer", () => {
     expect(returned).toContain("✗ Read failed");
     expect(returned).toContain("no such file");
   });
+
+  it("keeps rendering when expanded details cannot be serialized", () => {
+    const circular: any = { self: undefined };
+    circular.self = circular;
+    const result = { content: [{ type: "image", mimeType: "image/png", data: "x" }], details: circular };
+    const rows = readToolRenderer.renderResult(result, { expanded: true }, theme).render(80).join("\n");
+    expect(rows).toContain("could not be serialized");
+  });
+
+  it("wraps long lines without splitting surrogate pairs", () => {
+    const path = "/img/" + "🛰".repeat(10) + ".png";
+    const rows = readToolRenderer.renderResult({ content: [{ type: "text", text: `ERROR: Failed to read image: ${path}` }] }, {}, theme)
+      .render(20);
+    for (const row of rows) expect(Array.from(row).length).toBeLessThanOrEqual(20);
+    expect(rows.join("")).toContain("🛰".repeat(10));
+  });
 });
