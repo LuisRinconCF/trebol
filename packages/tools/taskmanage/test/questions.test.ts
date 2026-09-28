@@ -53,7 +53,8 @@ describe('compact task completion questions',()=>{
  // message, so a caller who exceeded a length bound saw a shape error.
  it('names the answer field and bound that actually failed',()=>{
   const answers=(patch:Record<string,unknown>)=>({operations:[{key:'a',op:'update',taskId:'1',status:'completed',answers:[{...answer,...patch}]}]});
-  expect(swarmValidateTaskManageParams(answers({answer:'x'.repeat(241)}))).toBe('operation "a": answers[0].answer is 241 characters; the limit is 240');
+  expect(swarmValidateTaskManageParams(answers({answer:'x'.repeat(2001)}))).toBe('operation "a": answers[0].answer is 2001 characters; the limit is 2000');
+  expect(swarmValidateTaskManageParams(answers({answer:'x'.repeat(2000)}))).toBeUndefined();
   expect(swarmValidateTaskManageParams(answers({evidence:'y'.repeat(513)}))).toBe('operation "a": answers[0].evidence is 513 characters; the limit is 512');
   expect(swarmValidateTaskManageParams(answers({answer:''}))).toBe('operation "a": answers[0].answer must be a non-empty string');
   expect(swarmValidateTaskManageParams(answers({extra:1}))).toBe('operation "a": answers[0] has unknown field "extra"; allowed fields are question, answer and evidence');
@@ -103,8 +104,8 @@ describe('compact task completion questions',()=>{
  });
  it('reports the exact answer field that violates a bound',()=>{
   const {manager}=fixture();
-  const result=manager.execute({operations:[{...done,answers:[{...answer,answer:'x'.repeat(241)}]}]});
-  expect(result.results[0].error?.message).toContain('answers[0].answer exceeds 240 characters');
+  const result=manager.execute({operations:[{...done,answers:[{...answer,answer:'x'.repeat(2001)}]}]});
+  expect(result.results[0].error?.message).toContain('answers[0].answer exceeds 2000 characters');
  });
  it('registered tool resolves evidence using execution workspace',async()=>{
   const {root}=fixture(); let tool:any;

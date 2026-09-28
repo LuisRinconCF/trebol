@@ -8,7 +8,6 @@
       "annoyed/index.ts",
       "codemode.ts",
       "control-task-tools.ts",
-      "exa-search.ts",
       "history-search.ts",
       "ask-user/index.ts",
       "research-tools.ts",
@@ -20,7 +19,6 @@
       "swarm-bash.ts",
       "swarm-fs-tools.ts",
       "swarm-history-vault-tools.ts",
-      "swarm-search.ts",
       "taskmanage.ts",
       "vault.ts"
     ]

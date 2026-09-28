@@ -14,17 +14,15 @@ export interface CanonicalTool { name: string; description: string; parameters: 
 
 /** Tools that are only registered in the interactive TUI. */
 const INTERACTIVE_TOOLS = new Set(["Bash", "ReadBackgroundCommand", "ask_user_question", "enter_plan_mode", "exit_plan_mode"]);
-/** Tools gated behind xAI credentials. */
-const CONDITIONAL_TOOLS = new Set(["x_search", "xai_web_search"]);
 let conditionalCache: Map<string, CanonicalTool> | undefined;
 let cache: Map<string, CanonicalTool> | undefined;
 
 const contractsFor = (names: (name: string) => boolean) =>
   new Map(Object.entries(TOOL_CONTRACTS).filter(([name]) => names(name)).map(([name, contract]) => [name, { name, ...contract }]));
 
-/** The always-on tool surface: everything not interactive-only or credential-gated. */
+/** The always-on tool surface: everything not interactive-only. */
 export function loadSwarmToolSurface(): Map<string, CanonicalTool> {
-  if (!cache) cache = contractsFor((name) => !INTERACTIVE_TOOLS.has(name) && !CONDITIONAL_TOOLS.has(name));
+  if (!cache) cache = contractsFor((name) => !INTERACTIVE_TOOLS.has(name));
   return cache;
 }
 /** Always-on plus environment-gated definitions, for description/schema overlay by name. */
@@ -63,9 +61,6 @@ export const PERMISSIVE_PARAMETERS = { type: "object" } as const;
 export const VALIDATES_OWN_ARGUMENTS: ReadonlySet<string> = new Set([
   // Reports per-operation, per-index errors naming the field and its bound.
   "TaskManage",
-  // "query is required", handle-count limits, and mutual-exclusion errors.
-  "x_search",
-  "xai_web_search",
   // Accepts file_path, file, path, and filename; the schema names only the
   // first, so enforcing it would reject calls that work today.
   "Read",

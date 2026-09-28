@@ -1,5 +1,26 @@
 # History Search
 
+## Public HistorySearch and HistoryGet
+
+The uppercase tools use `.pi/lib/tools/swarm-history-tools.ts` and the shared
+`history-reader.ts` / `history-matching.ts` primitives, independently of the UI.
+Search streams records and retains bounded top matches or frequency counters.
+Limits are 1 MiB per record, 256 MiB scanned per call, 10,000 discovered files,
+20,000 directory entries, depth 32 and 30 seconds. Search responses are capped
+at 64 KiB. `complete: false` and `partial_reasons` indicate omitted scan work;
+result truncation alone does not mean an incomplete scan. Regex uses RE2 and
+matches individual records; plain terms can match across messages. Metadata
+previews are bounded. Unsupported origin filtering is rejected. Segment/stats
+mode cannot be combined with fields or search_body=false.
+
+Get defaults to current workspace, validates duplicate IDs and refuses an
+incomplete lookup. Cancellation propagates through reads. One registered history
+operation runs at a time; concurrent calls receive a busy error and may retry.
+Stats stops explicitly at its vocabulary budget rather than silently estimating.
+See `docs/audits/history-search-implementation.md` for measured limits and gaps.
+
+## Lowercase compatibility tool
+
 `.pi/extensions/30-tools/history-search.ts` registers the read-only `history_search` tool.
 It searches Pi's JSONL sessions without resuming them and streams JSONL datasets
 without loading them into memory. Pi sessions are normally stored under
@@ -18,13 +39,16 @@ append-only tree linked by `id` and `parentId`.
   a dotted field path. It returns file/line coordinates and can include a
   bounded value preview.
 
-All output is capped and common API-key, token, password, and bearer-token
+Payload output is capped and common API-key, token, password, and bearer-token
 shapes are redacted. The TUI uses plain ASCII box drawing (`+`, `-`, `|`)
 with compact and expanded modes so it remains legible on minimal terminals,
 remote shells, and machines without Unicode font support. Malformed, unreadable, oversized, and symlink-unsafe
-inputs are skipped rather than terminating a corpus scan. No index, model,
-network request, or mutation is used, so a 10 GB JSONL corpus has bounded
-memory use (though a persistent index is a future performance optimization).
+inputs produce explicit incomplete-scan errors on the lowercase surface instead
+of being silently hidden. No index, model, network request, or mutation is used.
+A large corpus can exceed a call's scan budget; bounded memory does not imply
+complete results for arbitrary corpus sizes. List retains at most 100 recent
+sessions from the scanned corpus. JSON search reports whether it stopped at its
+result limit. A persistent index remains a future performance optimization.
 
 ## Agent workflows / user stories
 

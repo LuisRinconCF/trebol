@@ -3,9 +3,15 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { MAIN_REPORTING_DIRECTIVE, SWARM_FLOW_GUIDANCE, assembleForgePrompt, comparePromptGolden, currentContextBlocks, fetchWorkspaceExtensions, forgeSwarmSystemPrompt, renderWorkspaceContext, swarmForgeSystemPrompt } from "../../extensions/10-context/swarm-prompt";
+import { FIRST_RESPONSE_EXPLANATION_CHECK, FOOTER_EXPLANATION_PROMPT, footerExplanationRequested, MAIN_REPORTING_DIRECTIVE, TESTING_CONTRACT, SWARM_FLOW_GUIDANCE, assembleForgePrompt, comparePromptGolden, currentContextBlocks, fetchWorkspaceExtensions, forgeSwarmSystemPrompt, renderWorkspaceContext, swarmForgeSystemPrompt } from "../../extensions/10-context/swarm-prompt";
 
 describe("Forge prompt assembly", () => {
+  it("targets a natural footer explanation without affecting unrelated questions", () => {
+    expect(footerExplanationRequested("Help me improve the footer. Explain how each part works.")).toBe(true);
+    expect(footerExplanationRequested("Fix the footer test")).toBe(false);
+    expect(FOOTER_EXPLANATION_PROMPT).toContain("FIRST complete answer");
+    expect(FOOTER_EXPLANATION_PROMPT).toContain("label source-only segments and expanded modes as conditional");
+  });
   it("serves the live Forge constant rather than the stale documentation copy", () => {
     // Byte-for-byte parity against system_prompt.go is asserted in
     // packages/context/prompt/test; this guards the content the extension exposes.
@@ -23,15 +29,26 @@ describe("Forge prompt assembly", () => {
     expect(result.prompt).not.toContain("Pi's original system prompt");
     expect(result.prompt).not.toContain("Current working directory:");
     expect(result.prompt).not.toContain("pi-swarm:forge-prompt");
-    expect(result.prompt.startsWith("<system_information>\n<operating_system>")).toBe(true);
+    expect(result.prompt.startsWith(TESTING_CONTRACT)).toBe(true);
+    expect(result.prompt.indexOf(TESTING_CONTRACT)).toBeLessThan(result.prompt.indexOf("<system_information>"));
     expect(result.prompt.indexOf("## Core Principles:")).toBeLessThan(result.prompt.indexOf("# Delegation (the Task tool)"));
     expect(result.prompt).toContain(MAIN_REPORTING_DIRECTIVE);
+    expect(result.prompt).toContain(FIRST_RESPONSE_EXPLANATION_CHECK);
+    expect(result.prompt.indexOf(FIRST_RESPONSE_EXPLANATION_CHECK)).toBeGreaterThan(result.prompt.indexOf("# Delegation (the Task tool)"));
+    expect(result.prompt).toContain("# Harness-engineering explanations");
+    expect(result.prompt).toContain("actual model-facing contracts, event ordering, state transitions");
+    expect(result.prompt).toContain("agent-experience (AX) and user-experience (UX) journeys");
+    expect(result.prompt).toContain("label features found only in source as optional or conditional, not currently displayed");
+    expect(result.prompt).toContain("include at least one grounded fenced Mermaid diagram in the FIRST complete response");
+    expect(result.prompt).toContain("put source-only optional segments in a clearly conditional branch");
+    expect(result.prompt).toContain("add the diagram to that same response rather than relying on a later hook");
+    expect(result.prompt).toContain("Simple factual answers or questions lacking evidence need no diagram");
     expect(result.prompt).toContain("# Conversation startup\nWhen starting a conversation, call bootstrap first, then use TaskManage.");
     expect(result.prompt.indexOf(MAIN_REPORTING_DIRECTIVE)).toBeLessThan(result.prompt.indexOf("# Delegation (the Task tool)"));
     expect(result.prompt).toContain("<swarmos_cached_context>\nAs you answer the user's questions, you can use the following context:\n<context name=\"agentsMd\">\nworkspace instructions\n</context>");
     expect(result.prompt).toContain("stay in workspace");
     expect(result.hash).toMatch(/^sha256:/);
-    expect(result.provenance.map((entry) => entry.section)).toEqual(["workspace", "forge", "reporting", "delegation", "user", "tools", "skills", "restrictions", "context"]);
+    expect(result.provenance.map((entry) => entry.section)).toEqual(["testing-contract", "workspace", "forge", "reporting", "delegation", "response-check", "user", "tools", "skills", "restrictions", "context"]);
     expect(result.provenance.every((entry) => !entry.ref.includes("workspace instructions"))).toBe(true);
   });
 
@@ -53,15 +70,16 @@ describe("Forge prompt assembly", () => {
         .replace(/<context name="currentDate">[\s\S]*?<\/context>/, "<date/>")
         .replace(/<current_working_directory>[^<]*<\/current_working_directory>/, "<cwd/>")
         .replace(/<context name="projectName">\n[^\n]*\n<\/context>/, "<project/>");
-      expect(mask(result.prompt)).toBe(mask(fixture));
+      expect(mask(result.prompt.slice(TESTING_CONTRACT.length).replace(/^\n\n/, ""))).toBe(mask(fixture));
       // Pi -p intentionally uses the same Forge/delegation prompt as the TUI,
       // but headless mode does not advertise the interactive swarm-flow CLI.
       const headless = assembleForgePrompt("", { cwd, interactive: false, headlessForge: true, swarmFlowAvailable: true });
       expect(headless.prompt).not.toContain("<swarm_flow_capability>");
       expect(headless.prompt).toContain("# Delegation (the Task tool)");
+      expect(headless.prompt).toContain("# Harness-engineering explanations");
       expect(headless.prompt).toContain("## Core Principles:");
       expect(headless.prompt).toContain("<system_information>\n<operating_system>");
-      expect(result.prompt).toContain(`unavailable.\n\n\n\n${SWARM_FLOW_GUIDANCE}\n\n<swarmos_cached_context>`);
+      expect(result.prompt).toContain(`[/FIRST RESPONSE EXPLANATION CHECK]\n\n\n\n${SWARM_FLOW_GUIDANCE}\n\n<swarmos_cached_context>`);
     } finally { process.env.HOME = env.HOME; process.env.SHELL = env.SHELL; }
   });
 
@@ -79,6 +97,7 @@ describe("Forge prompt assembly", () => {
     const cwd = mkdtempSync(join(tmpdir(), "pi-prompt-"));
     const result = assembleForgePrompt("host", { cwd, contextFiles: ["../secret"] });
     expect(result.contextFiles).toEqual([]);
+    expect(result.prompt).not.toContain("# Harness-engineering explanations"); // default headless base retains its own contract
     expect(comparePromptGolden(result, result.prompt)).toEqual({ equal: true, actualHash: result.hash, goldenHash: result.hash });
   });
 

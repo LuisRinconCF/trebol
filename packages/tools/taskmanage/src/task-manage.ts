@@ -10,7 +10,7 @@ export type Ref = string | { ref: string; field?: "taskId" };
 export const MAX_TASK_QUESTIONS = 12;
 export const MAX_QUESTION_ID_LENGTH = 64;
 export const MAX_QUESTION_TEXT_LENGTH = 240;
-export const MAX_ANSWER_LENGTH = 240;
+export const MAX_ANSWER_LENGTH = 2000;
 export const MAX_EVIDENCE_LENGTH = 512;
 export interface TaskQuestion { id: string; text: string }
 export interface TaskAnswer { question: string; answer: string; evidence: string }

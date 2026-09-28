@@ -5,6 +5,7 @@ import { applySwarmSurface } from "../../lib/runtime/swarm-tool-surface.ts";
 import { CONTRACTS } from "../../lib/tools/swarm-history-tools.contract.ts";
 import { sortKeysDeep } from "../../lib/runtime/swarm-transport-parity.ts";
 import { registerVaultTool } from "./vault.ts";
+import { historyAdmission } from "../../lib/tools/history-admission.ts";
 
 type Pi = any;
 const registrations = new WeakSet<object>();
@@ -32,22 +33,24 @@ export function registerSwarmHistoryVaultTools(pi: Pi, options: { historyRoot?: 
   registerVaultTool(pi, options.vault);
   let sessionContext: any;
   pi.on?.("session_start", (_event: any, ctx: any) => { sessionContext = ctx; });
-  const register = (name: typeof names[number], run: (p: any, ctx: any) => Promise<any> | any, xml = false) => pi.registerTool?.(applySwarmSurface({
+  const register = (name: typeof names[number], run: (p: any, ctx: any, signal?: AbortSignal) => Promise<any> | any, xml = false) => pi.registerTool?.(applySwarmSurface({
     name, label: labels[name], ...CONTRACTS[name],
     async execute(_id: string, params: any, _signal: AbortSignal | undefined, _update: unknown, ctx: any) {
       try {
-        const value = await run(params ?? {}, ctx ?? sessionContext);
+        return await historyAdmission.run(_signal, async () => {
+        const value = await run(params ?? {}, ctx ?? sessionContext, _signal);
         if (name === "HistoryGet") {
           const bounded = boundedHistoryJSON(value, params?.max_chars ?? 12000);
           return { content: [{ type: "text", text: bounded.text }], details: bounded.value };
         }
         return okay(value, xml);
+        });
       } catch (error) { return failed(name, error); }
     },
   }));
-  const historyRuntime = (ctx: any) => ({ root: options.historyRoot ?? historyRootFromContext(ctx ?? sessionContext), cwd: options.cwd ?? ctx?.cwd ?? sessionContext?.cwd ?? pi.getCwd?.() ?? process.cwd() });
-  register("HistorySearch", (p, ctx) => historySearch(p, historyRuntime(ctx)));
-  register("HistoryGet", (p, ctx) => historyGet(p, historyRuntime(ctx)));
+  const historyRuntime = (ctx: any, signal?: AbortSignal) => ({ root: options.historyRoot ?? historyRootFromContext(ctx ?? sessionContext), cwd: options.cwd ?? ctx?.cwd ?? sessionContext?.cwd ?? pi.getCwd?.() ?? process.cwd(), signal });
+  register("HistorySearch", (p, ctx, signal) => historySearch(p, historyRuntime(ctx, signal)));
+  register("HistoryGet", (p, ctx, signal) => historyGet(p, historyRuntime(ctx, signal)));
 }
 
 export default function swarmHistoryVaultToolsExtension(pi: Pi): void { registerSwarmHistoryVaultTools(pi); }

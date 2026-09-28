@@ -20,3 +20,10 @@ artifacts/
 
 # Temporary runtime diagnostics (not project memory)
 .swarmpi/
+
+__pycache__/
+*.pyc
+Untitled
+.pi/render-debug*
+.pi/latest-box.png
+*.before-paseo-disabled

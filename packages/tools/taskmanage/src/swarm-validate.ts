@@ -13,7 +13,7 @@ const MINIMAL_CREATE = `{"key":"<your-key>","op":"create","subject":"<short impe
 const CATEGORIES = new Set(["researching", "planning", "acting", "verifying", "debugging", "documenting"]);
 const PRIORITIES = new Set(["low", "medium", "high"]);
 const NOTE_TYPES = new Set(["decision", "blocker", "learning", "milestone", "question", "observation", "other"]);
-const MAX_TASK_QUESTIONS = 12, MAX_QUESTION_ID_LENGTH = 64, MAX_QUESTION_TEXT_LENGTH = 240, MAX_ANSWER_LENGTH = 240, MAX_EVIDENCE_LENGTH = 512;
+const MAX_TASK_QUESTIONS = 12, MAX_QUESTION_ID_LENGTH = 64, MAX_QUESTION_TEXT_LENGTH = 240, MAX_ANSWER_LENGTH = 2000, MAX_EVIDENCE_LENGTH = 512;
 /**
  * The single source of truth for per-op field admissibility.
  *

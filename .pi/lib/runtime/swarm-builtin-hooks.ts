@@ -31,6 +31,11 @@ import {
   isTaskManagementTool, isUserInteractionTool, isCodeModeTool, normalizeToolName,
 } from "./swarm-toolclass.ts";
 
+/** The autogen manager owns persisted accounting; the builtin hook owns readable guidance. */
+export const AUTOGEN_BUDGET_SOURCE = Symbol.for("pi-swarm-autogen-budget-source");
+type BudgetSource = { config: { mode: string }; budgetStatus(): { used: number; budget: number; skilled: boolean }; gateTool(name: string, input: unknown): { block?: true; reason?: string } | undefined };
+const invocationTool = (name: string) => ["skill", "swarmskill", "skillinvoke", "skillcall", "useskill", "skillexec"].includes(normalizeToolName(name));
+
 // ---------------------------------------------------------------------------
 // nudge_budget.go
 // ---------------------------------------------------------------------------
@@ -433,99 +438,48 @@ export class AutogenBudgetEnforcementHook {
   readonly name = AUTOGEN_BUDGET_HOOK;
   private toolCalls = 0; private skilled = false; private nudgeIgnores = 0; private taskEverFocused = false;
   constructor(private readonly trigger: AutogenTriggerConfig = SWARM_TUI_AUTOGEN_TRIGGER) {}
+  private source(): BudgetSource | undefined { return (globalThis as any)[AUTOGEN_BUDGET_SOURCE]; }
   private exempt(event: ToolCallEvent): boolean {
     const n = event.toolName;
     if (n === "bootstrap") return true; // Recovery must work even at an exhausted skill budget.
     if (isSkillTool(n) || isTaskManagementTool(n) || isPlanModeTool(n) || isUserInteractionTool(n) || isCodeModeTool(n) || isReadOnlyExplorationTool(n)) return true;
-    if (isBashTool(n)) { const cmd = event.params?.command; if (typeof cmd === "string" && isBashReadOnly(cmd)) return true; }
+    // Unlike task enforcement, skill budgeting charges even read-only Bash.
     return false;
   }
   onToolBefore(event: ToolCallEvent, tasks: readonly HookTask[], budget: MetaNudgeBudget, session: string): HookResult {
-    if (!event.toolName || this.exempt(event)) return CONTINUE;
-    if (!this.taskEverFocused) { if (hasFocusedTask(tasks)) this.taskEverFocused = true; else return CONTINUE; }
-    const limit = this.skilled ? this.trigger.workingBudget : this.trigger.toolCallBudget;
-    if (this.toolCalls >= limit) {
-      if (this.skilled) {
-        this.nudgeIgnores++;
-        if (this.nudgeIgnores > this.trigger.maxNudgeIgnores) return { block: true, message: wrapReminder(this.name, "block", nextReminderSeq(this.name), this.escalationBlockMessage()) };
-        const [seq, ok] = budget.tryClaim(session, META_NUDGE_SKILL_REVIEW);
-        if (!ok) return CONTINUE;
-        return { message: wrapReminder(this.name, "review", seq, this.nudgeMessage()) };
-      }
-      return { block: true, message: wrapReminder(this.name, "block", nextReminderSeq(this.name), this.blockMessage()) };
+    const source = this.source();
+    if (!event.toolName) return CONTINUE;
+    if (source) {
+      // The durable manager decides the exact exemptions, focus, and limit.
+      // This hook only supplies an actionable model-visible block reason.
+      const decision = source.gateTool(event.toolName, event.params);
+      if (!decision?.block) return CONTINUE;
+      const state = source.budgetStatus();
+      return { block: true, message: wrapReminder(this.name, "block", nextReminderSeq(this.name), this.blockMessage(state.used, state.budget, decision.reason)) };
     }
-    this.toolCalls++;
+    if (this.exempt(event)) return CONTINUE;
+    if (!this.taskEverFocused) { if (hasFocusedTask(tasks)) this.taskEverFocused = true; else return CONTINUE; }
+    const state = source?.budgetStatus();
+    const limit = state?.budget ?? (this.skilled ? this.trigger.workingBudget : this.trigger.toolCallBudget);
+    const used = state?.used ?? this.toolCalls;
+    if (used >= limit) return { block: true, message: wrapReminder(this.name, "block", nextReminderSeq(this.name), this.blockMessage(used, limit)) };
+    // In the host, the manager charges at tool_call after this pre-hook. The
+    // fallback counter only supports standalone pipeline tests.
+    if (!source) this.toolCalls++;
     return CONTINUE;
   }
   onToolAfter(event: ToolResultEvent): void {
-    if (!isSkillTool(event.toolName) || event.failed) return;
+    if (!invocationTool(event.toolName) || event.failed) return;
     this.toolCalls = 0; this.nudgeIgnores = 0; this.skilled = true;
   }
-  private blockMessage() {
-    const t = this.trigger;
+  private blockMessage(used: number, limit: number, reason?: string) {
     return `[SKILL BUDGET ENFORCEMENT — BLOCKED]
 
-You have used ${this.toolCalls} non-exempt tool calls. The onboarding budget is ${t.toolCallBudget}.
-
-═══════════════════════════════════════════════════════════════
-                    YOU MUST CREATE OR USE A SKILL
-═══════════════════════════════════════════════════════════════
-
-You cannot execute any further tools until you:
-
-  1. Create a skill for the recurring pattern you're working on
-     → Call SkillManage(action: "create", name: "...", description: "...", instructions: "...")
-  2. Or use an existing skill that covers this workflow
-     → Call the Skill tool to invoke a relevant skill
-
-  After creating or using a skill, your budget upgrades to ${t.workingBudget} and ALL tools unlock.
-
-═══════════════════════════════════════════════════════════════
-
-This is a HARD REQUIREMENT. The onboarding budget exists to
-ensure you capture patterns early. Once you create your first
-skill, your budget expands to ${t.workingBudget}.`;
-  }
-  private nudgeMessage() {
-    const t = this.trigger;
-    const remaining = Math.max(t.maxNudgeIgnores - this.nudgeIgnores, 0);
-    return `[SKILL BUDGET NUDGE — ${this.toolCalls} non-exempt tool calls]
-
-You've exceeded your working budget of ${t.workingBudget}. This is a soft nudge — your
-tool call is still allowed, but you should consider:
-
-  1. Creating a skill for the recurring pattern you're working on
-     → Call SkillManage(action: "create", name: "...", description: "...", instructions: "...")
-  2. Patching an existing skill that's incomplete
-     → Call SkillManage(action: "patch", name: "...", instructions: "...")
-  3. Using an existing skill that covers this workflow
-     → Call the Skill tool to invoke a relevant skill
-
-If you create, patch, or invoke a skill, your budget refills to ${t.workingBudget}.
-You have ${remaining} soft nudge(s) remaining before hard enforcement.`;
-  }
-  private escalationBlockMessage() {
-    const t = this.trigger;
-    return `[SKILL BUDGET ENFORCEMENT — ESCALATION BLOCKED]
-
-You have used ${this.toolCalls} non-exempt tool calls and ignored ${this.nudgeIgnores} soft nudges.
-
-═══════════════════════════════════════════════════════════════
-                    YOU MUST CREATE OR USE A SKILL
-═══════════════════════════════════════════════════════════════
-
-Your working budget of ${t.workingBudget} has been exceeded and you've ignored
-${t.maxNudgeIgnores} nudges. ALL non-exempt tools are now HARD-BLOCKED.
-
-Create, patch, or invoke a skill to refill your budget:
-
-  1. SkillManage(action: "create", name: "...", description: "...", instructions: "...")
-  2. SkillManage(action: "patch", name: "...", instructions: "...")
-  3. Skill tool to invoke an existing skill
-
-═══════════════════════════════════════════════════════════════
-
-After creating, patching, or invoking a skill, your budget refills to ${t.workingBudget}.`;
+This tool did not run. ${used >= limit ? `Skill budget exhausted (${used}/${limit} non-exempt calls).` : `Skill review required (${used}/${limit} non-exempt calls).`}
+${reason ? `Gate reason: ${reason}\n` : ""}
+Don't give up or stop the task because of this block. First call Skill with {"skill":"<relevant available skill>"} and follow its instructions; then retry the blocked work. Only a successful Skill invocation refills the budget.
+SkillManage list/view/review/create/patch manages the library; it does not refill the budget. A no-mutation review satisfies a review reminder, not this block.
+If you don't know which skill fits, inspect with SkillManage(action:"list"). If none fits but you have a genuinely reusable workflow, create it with SkillManage(action:"create", ...), then invoke the new skill with Skill and continue. Don't create filler just to bypass this gate; only if no legitimate reusable skill is possible should you explain the blocker and ask the user. Task, read, and interaction tools may remain available.`;
   }
 }
 

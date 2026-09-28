@@ -44,6 +44,21 @@ describe("system-prompt ownership", () => {
     expect(resolveActiveSystemPrompt(cwd)).toMatchObject({ kind: "forge" });
   });
 
+  it("delivers footer guidance with natural requests but not unrelated or Pi-base requests", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "pi-footer-guidance-"));
+    const runtime = fakePi(); promptExtension(runtime.pi as any);
+    const handler = runtime.handlers.get("before_agent_start")![0];
+    const question = "Help me improve the footer. Explain how each visible part works.";
+    const selected: any = await handler({ systemPrompt: "Pi base", prompt: question, systemPromptOptions: { cwd } }, { cwd, hasUI: true });
+    expect(selected?.message?.content).toContain("FIRST complete answer");
+    expect(selected?.systemPrompt).toContain("[FIRST RESPONSE EXPLANATION CHECK]");
+    const unrelated: any = await handler({ systemPrompt: "Pi base", prompt: "Fix a test", systemPromptOptions: { cwd } }, { cwd, hasUI: true });
+    expect(unrelated?.message).toBeUndefined();
+    savePromptStore(cwd, { prompts: [], active: PI_DEFAULT_PROMPT });
+    const piBase: any = await handler({ systemPrompt: "Pi base", prompt: question, systemPromptOptions: { cwd } }, { cwd, hasUI: true });
+    expect(piBase?.message).toBeUndefined();
+  });
+
   it("honors the explicit Pi-base selection", async () => {
     const cwd = mkdtempSync(join(tmpdir(), "pi-prompt-owner-"));
     savePromptStore(cwd, { prompts: [], active: PI_DEFAULT_PROMPT });
