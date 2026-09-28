@@ -2,6 +2,12 @@
 
 Release metadata is kept in `package.json`, `update-manifest.json`, and this file together.
 
+## [Unreleased]
+
+- Add a dedicated Read tool renderer (image-aware result summary and call card) and register it with the Read tool.
+- Correct stale validation and parity documentation in AGENTS.md (removed `test:parity`/`parity:probe` references, fixed global-install import notes).
+- Document global `pi install` usage in the README.
+
 ## [0.5.0] - 2026-09-28
 
 - Require Mermaid diagrams in substantial explanations through all system-prompt paths, repair eligible Mermaid syntax errors, and add a one-shot follow-up hook.
