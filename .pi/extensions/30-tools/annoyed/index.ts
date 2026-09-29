@@ -60,7 +60,9 @@ export default function annoyedExtension(rawPi: any) {
       if (!verdict) {
         const fallback = { scope: "uncertain", reason: "Judge interrupted; retained for Trebol triage without repeating consultation" };
         await store.setMetadata(result.issue.id, { verdict: fallback, publicationStatus: "judging" });
-        const judged = await runAnnoyedJudge(pi, { report: fields, project: projectRepository ?? projectResolution, cwd, model: ctx?.model, signal });
+        let judged: Awaited<ReturnType<typeof runAnnoyedJudge>>;
+        try { judged = await runAnnoyedJudge(pi, { report: fields, project: projectRepository ?? projectResolution, cwd, model: ctx?.model, signal }); }
+        catch (e) { await store.setMetadata(result.issue.id, { publicationStatus: "ready" }).catch(() => undefined); throw e; }
         if (judged.cancelled || signal.aborted) {
           await store.setMetadata(result.issue.id, { publicationStatus: "ready" });
           throw new Error("annoyed: cancelled");

@@ -57,8 +57,10 @@ const defaultGH: GHRunner = (args, stdin, abortSignal) => new Promise((resolveP)
   const collect = (target: Buffer[], d: Buffer) => { bytes += d.length; if (bytes > 4 * 1024 * 1024) abort(); else target.push(d); };
   child.stdout.on("data", (d: Buffer) => collect(out, d)); child.stderr.on("data", (d: Buffer) => collect(err, d));
   child.stdin.on("error", () => undefined);
-  child.on("error", (e) => resolveP({ code: null, signal: null, stdout: "", stderr: "", spawnError: e }));
-  child.on("close", (code, signal) => { clearTimeout(timer); abortSignal?.removeEventListener("abort", abort); resolveP({ code, signal, stdout: Buffer.concat(out).toString(), stderr: Buffer.concat(err).toString() }); });
+  let settled = false;
+  const cleanup = () => { clearTimeout(timer); abortSignal?.removeEventListener("abort", abort); };
+  child.on("error", (e) => { if (settled) return; settled = true; cleanup(); resolveP({ code: null, signal: null, stdout: "", stderr: "", spawnError: e }); });
+  child.on("close", (code, signal) => { if (settled) return; settled = true; cleanup(); resolveP({ code, signal, stdout: Buffer.concat(out).toString(), stderr: Buffer.concat(err).toString() }); });
   child.stdin.end(stdin);
 });
 

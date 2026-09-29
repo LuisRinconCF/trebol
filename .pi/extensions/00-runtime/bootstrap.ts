@@ -174,7 +174,9 @@ export default function bootstrapExtension(pi: any) {
         const skills = registry.list().filter(s => !s.disableModelInvocation).slice(0, 100).map(s => ({ name: s.name, description: s.description, source: s.source, body: "" }));
         const consult = async (request: string) => {
           const raw = await consultModel(model, request, ctx.cwd, signal);
-          return parseConsultedJson(raw);
+          const parsed = parseConsultedJson(raw);
+          if (typeof parsed !== "object" || parsed === null) throw new Error("Invalid selector response");
+          return parsed as Record<string, unknown>;
         };
         let done = 0;
         const select = async (kind: "memory" | "skills" | "combined"): Promise<BootstrapSelection> => {

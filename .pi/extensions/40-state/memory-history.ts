@@ -232,7 +232,7 @@ export default function memoryHistoryExtension(pi: any): void {
         const text = params.text ?? params.note;
         if (typeof text !== "string" || !text.trim()) throw new Error("remember requires non-empty text (or note)");
         if (selectedScope === "session") {
-          const entry = history.remember(text, requested, (params.tags ?? []).map(String), params.source || "memory_history");
+          const entry = history.remember(text, { ...scope, namespace: params.namespace || scope.namespace }, (params.tags ?? []).map(String), params.source || "memory_history");
           pi.appendEntry?.(MEMORY_ENTRY_TYPE, entry.data);
           return { content: [{ type: "text", text: JSON.stringify({ knowledge: [], legacy: [entry.data] }) }], details: {} };
         }
