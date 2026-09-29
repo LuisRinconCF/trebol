@@ -231,6 +231,11 @@ export default function memoryHistoryExtension(pi: any): void {
       if (params.operation === "remember") {
         const text = params.text ?? params.note;
         if (typeof text !== "string" || !text.trim()) throw new Error("remember requires non-empty text (or note)");
+        if (selectedScope === "session") {
+          const entry = history.remember(text, requested, (params.tags ?? []).map(String), params.source || "memory_history");
+          pi.appendEntry?.(MEMORY_ENTRY_TYPE, entry.data);
+          return { content: [{ type: "text", text: JSON.stringify({ knowledge: [], legacy: [entry.data] }) }], details: {} };
+        }
         const record = openKnowledgeStore({ cwd, scope: selectedScope === "worktree" ? "worktree" : "repository", root: sharedMemoryRoot(), namespace: params.namespace || "default" }).put({ text: redactKnowledge(text), tags: (params.tags ?? []).map((s: string) => redactKnowledge(String(s))), evidence: [], status: "candidate", kind: "fact", source: "memory_history" });
         return { content: [{ type: "text", text: JSON.stringify({ knowledge: [record], legacy: [] }) }], details: {} };
       }

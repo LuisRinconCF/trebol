@@ -185,8 +185,11 @@ export class AnnoyedStore {
         const metadata = parse<Record<string, unknown>>(row.metadata_json, {});
         if (metadata.publicationStatus === "ready" && metadata.verdict) {
           metadata.receiptOwner = input.receiptOwner; metadata.publicationStatus = "reserved";
-          db.prepare("UPDATE issues SET metadata_json=? WHERE id=?").run(json(metadata), row.id);
+          const now = this.now().toISOString();
+          db.prepare("UPDATE issues SET metadata_json=?,updated_at=? WHERE id=?").run(json(metadata), now, row.id);
+          db.prepare("INSERT INTO issue_events(issue_id,event_type,at,payload_json) VALUES(?,?,?,?)").run(row.id, "publication_state", now, json({ receiptOwner: input.receiptOwner, publicationStatus: "reserved" }));
           db.exec("COMMIT");
+          await this.exportJson();
           return { issue: this.rowToIssue(db.prepare("SELECT * FROM issues WHERE id=?").get(row.id)), reserved: true };
         }
         db.exec("COMMIT");

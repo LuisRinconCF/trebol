@@ -175,7 +175,7 @@ function sessionEntries(ctx: any): readonly any[] {
  */
 function ctxAlive(ctx: any): boolean {
   if (!ctx) return false;
-  try { return ctx.ui !== undefined; } catch { return false; }
+  try { return ctx.ui != null; } catch { return false; }
 }
 
 function persist() {

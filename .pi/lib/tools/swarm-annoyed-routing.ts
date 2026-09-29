@@ -41,7 +41,10 @@ const run = (command: string, args: string[], cwd: string, signal?: AbortSignal)
   const abort = () => child.kill("SIGKILL"); signal?.addEventListener("abort", abort, { once: true });
   child.stdout.on("data", (b: Buffer) => { size += b.length; if (size < 8192) out.push(b); else child.kill("SIGKILL"); });
   child.stderr.on("data", (b: Buffer) => { if (Buffer.concat(err).length < 2048) err.push(b); });
-  child.on("error", reject); child.on("close", code => { clearTimeout(timer); signal?.removeEventListener("abort", abort); if (signal?.aborted) reject(new Error("cancelled")); else if (code !== 0) reject(new Error("repository verification failed")); else resolveP(Buffer.concat(out).toString().trim()); });
+  let settled = false;
+  const cleanup = () => { clearTimeout(timer); signal?.removeEventListener("abort", abort); };
+  child.on("error", error => { if (settled) return; settled = true; cleanup(); reject(error); });
+  child.on("close", code => { if (settled) return; settled = true; cleanup(); if (signal?.aborted) reject(new Error("cancelled")); else if (code !== 0) reject(new Error("repository verification failed")); else resolveP(Buffer.concat(out).toString().trim()); });
 });
 
 export async function verifiedProjectRepository(cwd: string, signal?: AbortSignal): Promise<string | undefined> {
