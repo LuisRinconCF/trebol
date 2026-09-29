@@ -132,7 +132,7 @@ export class MemoryHistory {
   }
 }
 
-const schema = { type: "object", required: ["operation"], additionalProperties: false, properties: { operation: { type: "string", enum: ["remember", "offer", "search", "recall", "replay", "migrate", "correct", "delete", "get"] }, text: { type: "string" }, query: { type: "string" }, tags: { type: "array", items: { type: "string" } }, evidence: { type: "array", items: { type: "object", required: ["ref"], additionalProperties: false, properties: { ref: { type: "string" }, quote: { type: "string" } } } }, status: { type: "string", enum: ["candidate", "verified"] }, kind: { type: "string", enum: ["fact", "decision", "process", "context"] }, source: { type: "string" }, id: { type: "string" }, expectedRevision: { type: "string" }, namespace: { type: "string" }, limit: { type: "number" }, mode: { type: "string", enum: ["topical", "task"] } } } as const;
+const schema = { type: "object", required: ["operation"], additionalProperties: false, properties: { operation: { type: "string", enum: ["remember", "offer", "search", "recall", "replay", "migrate", "correct", "delete", "get"] }, text: { type: "string" }, note: { type: "string" }, query: { type: "string" }, tags: { type: "array", items: { type: "string" } }, evidence: { type: "array", items: { type: "object", required: ["ref"], additionalProperties: false, properties: { ref: { type: "string" }, quote: { type: "string" } } } }, status: { type: "string", enum: ["candidate", "verified"] }, kind: { type: "string", enum: ["fact", "decision", "process", "context"] }, source: { type: "string" }, id: { type: "string" }, expectedRevision: { type: "string" }, namespace: { type: "string" }, limit: { type: "number" }, mode: { type: "string", enum: ["topical", "task"] } } } as const;
 
 export default function memoryHistoryExtension(pi: any): void {
   const history = new MemoryHistory();
@@ -217,7 +217,7 @@ export default function memoryHistoryExtension(pi: any): void {
           const store = openKnowledgeStore({ cwd, scope: selectedScope, root: sharedMemoryRoot(), namespace });
           if (params.operation === "correct" && !store.read(params.id)) throw new Error("Cannot correct an unknown knowledge record");
           const evidence: EvidenceRef[] = Array.isArray(params.evidence) ? params.evidence.map((item: any) => ({ ref: redactKnowledge(String(item?.ref ?? "")), ...(item?.quote ? { quote: redactKnowledge(String(item.quote)) } : {}) })) : [];
-          const record = store.put({ id: params.id || undefined, expectedRevision: params.expectedRevision || undefined, text: redactKnowledge(params.text ?? ""), tags: (params.tags ?? []).map((s: string) => redactKnowledge(String(s))), evidence, status: (params.status ?? "candidate") as KnowledgeStatus, kind: (params.kind ?? "fact") as KnowledgeKind, source: redactKnowledge(params.source ?? "memory_history") });
+          const record = store.put({ id: params.id || undefined, expectedRevision: params.expectedRevision || undefined, text: redactKnowledge(params.text ?? params.note ?? ""), tags: (params.tags ?? []).map((s: string) => redactKnowledge(String(s))), evidence, status: (params.status ?? "candidate") as KnowledgeStatus, kind: (params.kind ?? "fact") as KnowledgeKind, source: redactKnowledge(params.source ?? "memory_history") });
           return { content: [{ type: "text", text: JSON.stringify({ knowledge: [record], legacy: [] }) }], details: {} };
         }
         if (params.operation === "delete") {
@@ -229,11 +229,12 @@ export default function memoryHistoryExtension(pi: any): void {
         return { content: [{ type: "text", text: JSON.stringify({ knowledge: knowledge.slice(0, limit), legacy, scanLimitPerScope: null }) }], details: {} };
       }
       if (params.operation === "remember") {
-        const entry = history.remember(params.text ?? "", { ...scope, namespace: params.namespace ?? scope.namespace }, params.tags ?? [], "memory_history");
-        pi.appendEntry?.(MEMORY_ENTRY_TYPE, entry.data);
-        return { content: [{ type: "text", text: JSON.stringify(entry.data) }], details: {} };
+        const text = params.text ?? params.note;
+        if (typeof text !== "string" || !text.trim()) throw new Error("remember requires non-empty text (or note)");
+        const record = openKnowledgeStore({ cwd, scope: selectedScope === "worktree" ? "worktree" : "repository", root: sharedMemoryRoot(), namespace: params.namespace || "default" }).put({ text: redactKnowledge(text), tags: (params.tags ?? []).map((s: string) => redactKnowledge(String(s))), evidence: [], status: "candidate", kind: "fact", source: "memory_history" });
+        return { content: [{ type: "text", text: JSON.stringify({ knowledge: [record], legacy: [] }) }], details: {} };
       }
-      const requested = { ...scope, namespace: params.namespace ?? scope.namespace };
+      const requested = { ...scope, namespace: params.namespace || scope.namespace };
       if (params.operation === "migrate") {
         const migrated = history.migrate(sessionEntries, requested);
         for (const entry of migrated) pi.appendEntry?.(MEMORY_ENTRY_TYPE, entry.data);

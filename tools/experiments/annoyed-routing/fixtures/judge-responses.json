@@ -1,0 +1,9 @@
+{
+  "harness": { "scope": "harness", "reason": "Pi-Swarm tool behavior" },
+  "project": { "scope": "project", "reason": "Active project behavior" },
+  "upstream": { "scope": "upstream", "reason": "Dependency behavior" },
+  "non_actionable": { "scope": "non_actionable", "reason": "No reproducible product defect" },
+  "uncertain": { "scope": "uncertain", "reason": "Ownership is unclear" },
+  "malformed": "not-json",
+  "unknown_scope": { "scope": "other", "reason": "invalid scope" }
+}

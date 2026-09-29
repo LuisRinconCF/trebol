@@ -2,6 +2,29 @@
 
 Release metadata is kept in `package.json`, `update-manifest.json`, and this file together.
 
+## [Unreleased]
+
+- Accept canonical numeric task references in TaskManage: integer `taskId`,
+  `parentTaskId`, `addBlocks`/`addBlockedBy` entries and `{ref}` targets are
+  coerced to the decimal-string IDs returned by `op:list`/`op:create`, and
+  `{"ref":"<task id>"}` now resolves a literal task ID when no key binding
+  matches (cloverinternational/trebol#33, #35, #36).
+- Match TaskManage evidence headings with punctuation (?, parentheses, commas)
+  punctuation-insensitively on both sides, while exact and dash-slug matches
+  keep working (cloverinternational/trebol#36).
+- Repair bootstrap planner replies automatically: fenced JSON with trailing
+  prose, unwrapped JSON followed by commentary, and payloads with trailing
+  text no longer degrade bootstrap; truncated JSON still fails with a clear
+  error.
+- Split TaskManage evidence reference lists on `;` and `,` even when no
+  whitespace follows the separator, so `a.md#X;b.md#Y` resolves both files
+  like `a.md#X; b.md#Y` already did; separators inside headings that do not
+  start a path-like reference remain unsplit.
+- Resolve string task references in `addBlocks`/`addBlockedBy` against the
+  persistent key ledger as well as the current batch, matching the
+  `{"ref":…}` form so dependency arrays no longer fail with not-found when
+  they name a task created in an earlier batch.
+
 ## [0.4.0] - 2026-09-23
 
 - Add evidence-backed memory candidate capture, explicit offer handoff, bounded

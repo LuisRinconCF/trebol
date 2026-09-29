@@ -54,6 +54,7 @@ const VALID_STATUSES = new Set<AnnoyedStatus>(["backlog", "triage", "accepted", 
 const VALID_SEVERITIES = new Set<AnnoyedSeverity>(["low", "medium", "high", "critical"]);
 const json = (value: unknown) => JSON.stringify(value ?? null);
 const parse = <T>(value: unknown, fallback: T): T => { try { return value == null ? fallback : JSON.parse(String(value)); } catch { return fallback; } };
+const mergedMetadata = (oldValue: unknown, nextValue: unknown) => ({ ...parse<Record<string, unknown>>(oldValue, {}), ...((nextValue && typeof nextValue === "object") ? nextValue as Record<string, unknown> : {}) });
 const id = () => `ann-${new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14)}-${crypto.randomUUID().slice(0, 8)}`;
 const clean = (value: unknown, max = 12000) => String(value ?? "").trim().slice(0, max);
 const list = (value: unknown, maxItems = 32) => (Array.isArray(value) ? value : []).map(x => clean(x, 4000)).filter(Boolean).slice(0, maxItems);
@@ -142,10 +143,14 @@ export class AnnoyedStore {
     await this.open(); const db = this.requireDb(); const now = this.now().toISOString();
     const text = clean(input.issue); if (!text) throw new Error("issue is required");
     const fingerprint = clean(input.fingerprint, 200) || await fingerprintFor(input);
+    db.exec("BEGIN IMMEDIATE");
+    try {
     const existing = db.prepare("SELECT * FROM issues WHERE fingerprint = ?").get(fingerprint);
     if (existing) {
-      const updated = db.prepare("UPDATE issues SET occurrences=occurrences+1,last_seen_at=?,updated_at=?,metadata_json=? WHERE id=?").run(now, now, json(input.metadata ?? parse(existing.metadata_json, {})), existing.id);
+      const preserved = parse<Record<string, unknown>>(existing.metadata_json, {});
+      db.prepare("UPDATE issues SET occurrences=occurrences+1,last_seen_at=?,updated_at=?,metadata_json=? WHERE id=?").run(now, now, json(preserved), existing.id);
       db.prepare("INSERT INTO issue_events(issue_id,event_type,at,payload_json) VALUES(?,?,?,?)").run(existing.id, "observed_again", now, json(stripTranscript(input)));
+      db.exec("COMMIT");
       await this.exportJson();
       return { issue: this.rowToIssue(db.prepare("SELECT * FROM issues WHERE id=?").get(existing.id)), duplicate: true };
     }
@@ -166,7 +171,36 @@ export class AnnoyedStore {
       issue.lastSeenAt, issue.createdAt, issue.updatedAt, issue.resolution ?? null, json(issue.tags), json(issue.transcript), json(issue.metadata));
     // The event log is an audit trail; the transcript already lives on the issue row.
     db.prepare("INSERT INTO issue_events(issue_id,event_type,at,payload_json) VALUES(?,?,?,?)").run(issue.id, "created", now, json(stripTranscript(issue)));
+    db.exec("COMMIT");
     await this.exportJson(); return { issue, duplicate: false };
+    } catch (error) { try { db.exec("ROLLBACK"); } catch {} throw error; }
+  }
+
+  async reserve(input: Partial<AnnoyedIssue> & { issue: string; fingerprint: string; receiptOwner: string }): Promise<{ issue: AnnoyedIssue; reserved: boolean }> {
+    const result = await this.upsert({ ...input, metadata: { ...(input.metadata ?? {}), receiptOwner: input.receiptOwner } });
+    if (result.duplicate) {
+      const db = this.requireDb(); db.exec("BEGIN IMMEDIATE");
+      try {
+        const row = db.prepare("SELECT * FROM issues WHERE id=?").get(result.issue.id);
+        const metadata = parse<Record<string, unknown>>(row.metadata_json, {});
+        if (metadata.publicationStatus === "ready" && metadata.verdict) {
+          metadata.receiptOwner = input.receiptOwner; metadata.publicationStatus = "reserved";
+          db.prepare("UPDATE issues SET metadata_json=? WHERE id=?").run(json(metadata), row.id);
+          db.exec("COMMIT");
+          return { issue: this.rowToIssue(db.prepare("SELECT * FROM issues WHERE id=?").get(row.id)), reserved: true };
+        }
+        db.exec("COMMIT");
+      } catch (error) { db.exec("ROLLBACK"); throw error; }
+    }
+    return { issue: result.issue, reserved: !result.duplicate };
+  }
+
+  async setMetadata(id: string, patch: Record<string, unknown>): Promise<AnnoyedIssue> {
+    await this.open(); const db = this.requireDb(); const row = db.prepare("SELECT * FROM issues WHERE id=?").get(id); if (!row) throw new Error("issue not found");
+    const metadata = mergedMetadata(row.metadata_json, patch), now = this.now().toISOString();
+    db.prepare("UPDATE issues SET metadata_json=?,updated_at=? WHERE id=?").run(json(metadata), now, id);
+    db.prepare("INSERT INTO issue_events(issue_id,event_type,at,payload_json) VALUES(?,?,?,?)").run(id, "publication_state", now, json(patch));
+    await this.exportJson(); return this.rowToIssue(db.prepare("SELECT * FROM issues WHERE id=?").get(id));
   }
 
   async list(status?: AnnoyedStatus): Promise<AnnoyedIssue[]> { await this.open(); const db = this.requireDb();
@@ -184,7 +218,7 @@ export class AnnoyedStore {
   }
 
   async exportJson() { await this.open(); const issues = await this.list(); const payload = { schemaVersion: 1, exportedAt: this.now().toISOString(), database: this.databasePath, issues: issues.map(stripTranscript) };
-    const temp = `${this.exportPath}.tmp-${process.pid}`; await writeFile(temp, JSON.stringify(payload, null, 2) + "\n", { mode: 0o600 }); await rename(temp, this.exportPath); await chmod(this.exportPath, 0o600).catch(() => undefined); return payload;
+    const temp = `${this.exportPath}.tmp-${process.pid}-${crypto.randomUUID()}`; await writeFile(temp, JSON.stringify(payload, null, 2) + "\n", { mode: 0o600 }); await rename(temp, this.exportPath); await chmod(this.exportPath, 0o600).catch(() => undefined); return payload;
   }
 
   close() { this.db?.close(); this.db = undefined; }

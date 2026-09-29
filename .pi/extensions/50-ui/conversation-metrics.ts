@@ -166,9 +166,22 @@ function sessionEntries(ctx: any): readonly any[] {
   return ctx?.sessionManager?.getEntries?.() ?? ctx?.sessionManager?.getBranch?.() ?? [];
 }
 
+/**
+ * True while a ctx can still be dereferenced. Pi invalidates every ctx getter
+ * (`ui`, `model`, ...) after session replacement or reload, so a captured ctx
+ * throws on its next property access. Assigning a stale ctx into `shared`
+ * would poison the footer, the interval and `persist()` for the rest of the
+ * process, because `shared` survives reload on `globalThis`.
+ */
+function ctxAlive(ctx: any): boolean {
+  if (!ctx) return false;
+  try { return ctx.ui !== undefined; } catch { return false; }
+}
+
 function persist() {
   shared.metrics!.updatedAt = new Date().toISOString();
-  shared.pi?.appendEntry?.(ENTRY, { ...shared.metrics });
+  try { shared.pi?.appendEntry?.(ENTRY, { ...shared.metrics }); }
+  catch { /* stale after session replacement or reload; the next session re-persists */ }
 }
 
 function currentWalltime(now = Date.now()): number {
@@ -183,9 +196,15 @@ class MetricsFooter {
     catch (error) {
       // A footer defect must never take down the whole TUI, but swallowing it
       // silently hides real regressions, so report it once per session.
+      // The notify itself is guarded: `shared.ctx` may be stale during the
+      // reload window, and a throw from this catch would escape into the TUI's
+      // render timer as an uncaughtException and kill the process. A dead ctx
+      // means the render error is that transitional staleness, not a footer
+      // defect; the next session_start re-renders with a fresh ctx.
+      if (!ctxAlive(shared.ctx)) return [];
       if (!this.reportedRenderError) {
         this.reportedRenderError = true;
-        shared.ctx?.ui?.notify?.(`Metrics footer disabled after render error: ${error instanceof Error ? error.message : error}`, "warning");
+        shared.ctx.ui.notify?.(`Metrics footer disabled after render error: ${error instanceof Error ? error.message : error}`, "warning");
       }
       return [];
     }
@@ -258,7 +277,7 @@ export default function conversationMetricsExtension(pi: any) {
   if (registered.has(pi)) return;
   registered.add(pi);
   shared.pi = pi;
-  const refreshWork = () => { const ctx = shared.ctx; if (ctx) ctx.ui?.requestRender?.(); };
+  const refreshWork = () => { const ctx = shared.ctx; if (ctxAlive(ctx)) ctx.ui?.requestRender?.(); };
   const workStop = onRunningWorkChange(refreshWork);
   pi.on?.("session_start", (_event: any, ctx: any) => {
     shared.generation++;
@@ -266,20 +285,34 @@ export default function conversationMetricsExtension(pi: any) {
     shared.metrics = normalize(previous);
     shared.ctx = ctx;
     render(ctx);
-    if (!shared.timer) shared.timer = setInterval(() => { if (!shared.ctx) return; shared.frame++; render(shared.ctx); }, 500);
+    if (!shared.timer) shared.timer = setInterval(() => {
+      const ctx = shared.ctx;
+      if (!ctx) return;
+      // A ghost event can poison shared.ctx after the runner was invalidated
+      // (e.g. a queued continuation racing a reload); drop it and wait for the
+      // next session_start instead of throwing inside this timer callback.
+      if (!ctxAlive(ctx)) { shared.ctx = undefined; return; }
+      shared.frame++;
+      render(ctx);
+    }, 500);
     (shared.timer as any)?.unref?.();
   });
   pi.on?.("agent_start", (_event: any, ctx: any) => {
     const m = shared.metrics ?? (shared.metrics = blank());
     if (!m.active) { m.active = true; m.wallStartedAt = Date.now(); }
-    shared.ctx = ctx ?? shared.ctx;
+    // A ghost event after invalidation passes a stale ctx; assigning it bare
+    // would poison shared.ctx for every later render (the assignment cannot
+    // throw, the next property access does).
+    shared.ctx = ctxAlive(ctx) ? ctx : shared.ctx;
+    if (!ctxAlive(shared.ctx)) return;
     working(shared.ctx, true);
     saveAndRender(shared.ctx);
   });
   onAgentSettled(pi, (_event: any, ctx: any) => {
     const m = shared.metrics ?? (shared.metrics = blank());
     if (m.active) { m.walltimeMs = currentWalltime(); m.active = false; m.wallStartedAt = undefined; }
-    shared.ctx = ctx ?? shared.ctx;
+    shared.ctx = ctxAlive(ctx) ? ctx : shared.ctx;
+    if (!ctxAlive(shared.ctx)) return;
     working(shared.ctx, false);
     saveAndRender(shared.ctx);
   });

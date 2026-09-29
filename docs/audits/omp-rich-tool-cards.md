@@ -2,7 +2,7 @@
 
 ## Purpose and scope
 
-Compare the *visual UI patterns* of Oh My Pi (OMP) tool cards—not model-facing schemas—with corresponding Pi-Swarm tool renderers. User requested each tool, concrete UI examples, and improvements. Findings below are source inspection, not live TUI/browser verification.
+Compare the *visual UI patterns* of Oh My Pi (OMP) tool cards—not model-facing schemas—with corresponding Pi-Swarm tool renderers. User requested each tool, concrete UI examples, and improvements. The original findings were source inspection; the addendum below records real renderer invocations and a VHS replay, with verification limits kept explicit.
 
 OMP baseline is vendored revision `daf07999c2fee9b22edc7bf8fea1fb6272e0df5e` (`vendor/oh-my-pi/packages/coding-agent/src/tools/renderers.ts`). Its registry has these renderer families: Ask; AST Grep/Edit; Bash; Debug; Eval; Edit/Apply Patch; Glob; Grep; LSP; Hub; Read; Resolve/Reject; Retain/Recall/Reflect; Task; Think; Todo; GitHub; Goal; Web Search; Vibe spawn/send/wait/kill/list; Write. Registrations: `vendor/oh-my-pi/packages/coding-agent/src/tools/renderers.ts#L95-L141`.
 
@@ -10,7 +10,7 @@ Pi-Swarm scope follows active layer manifests, especially `.pi/extensions/30-too
 
 ## Baseline and verification limits
 
-OMP source contract: `vendor/oh-my-pi/docs/tui.md` describes interactive TUI, headless and RPC modes; tool renderers receive call/result state and theme. It emphasizes component stability, semantic theme usage, and rich custom components. Specific renderer examples below come from source paths; they are not screenshots. I did not launch OMP or Pi-Swarm in an interactive TUI, exercise actual tool calls, capture matched themes/viewports, or validate live keyboard/overlay behavior. Therefore “OMP does X” below means source implementation indicates it, not that a live session was observed.
+OMP source contract: `vendor/oh-my-pi/docs/tui.md` describes interactive TUI, headless and RPC modes; tool renderers receive call/result state and theme. It emphasizes component stability, semantic theme usage, and rich custom components. The original examples below were source-only. The **renderer-level capture addendum** later in this document calls actual OMP `renderCall`/`renderResult` functions and Pi-Swarm renderer components with shared fixtures; this still does not launch either application’s interactive TUI or verify live keyboard/overlay behavior.
 
 ## What makes OMP cards feel rich
 
@@ -72,4 +72,26 @@ OMP source contract: `vendor/oh-my-pi/docs/tui.md` describes interactive TUI, he
 
 ## Evidence gaps / next verification
 
-To make this a visual comparison rather than source audit, run both applications in a controlled terminal at matched widths and theme (e.g. 80 and 120 columns), then VHS-capture Read, Edit, Grep, Bash, web search, task, and agent lifecycle with pending/partial/success/error and expanded output. Verify keyboard expansion and any custom ask/overlay flow. Preserve the original mocked VHS image from the prior audit only as an illustrative artifact; it is not evidence of these cards.
+Remaining: launch both applications in a controlled interactive terminal and verify keyboard expansion and custom ask/overlay flows; capture real Edit/Task/agent lifecycle states (not in the current shared fixture set); align exact theme palettes. The VHS capture below is a replay of renderer-produced ANSI output, not an interactive Pi TUI session. Preserve the earlier mocked VHS image only as illustrative; it is not evidence of live cards.
+
+## Renderer-level capture addendum (real renderer code; fixture-driven)
+
+The capture harness invokes real renderer implementations on both sides, with identical fixture arguments, output text, details, and error flags. OMP uses its dark theme and direct imports of the individual renderer modules; Pi-Swarm uses its Bash components and the production `withDefaultToolRenderer` adapter for non-Bash tools. The fixture-driven output is therefore stronger than the original source-only comparison, but is **not** a live tool execution or a whole-application TUI capture. Pi-Swarm’s generic adapter only receives the tool result here, matching its actual lack of per-tool call renderer; it does not provide a per-tool header.
+
+- Harness + shared fixtures: `tools/experiments/tool-card-capture/fixtures.ts`, `render-omp.ts`, `render-swarm.ts`.
+- Captures: `artifacts/tool-cards/omp.json`, `artifacts/tool-cards/swarm.json`; joined ANSI side-by-side transcripts: `artifacts/tool-cards/side-by-side-80.txt` and `side-by-side-120.txt`.
+- VHS: `artifacts/tool-cards/tool-cards.tape` and `artifacts/tool-cards/tool-cards.gif`. The tape prints the captured renderer output via `cat`/`sed`; it does not launch either TUI.
+- Coverage: Bash call/success/error/expanded; Read call/success/error; Grep call/success/empty; Glob success; Web Search success. Widths 80 and 120. OMP returned 24 captures with no renderer errors; Pi-Swarm returned 24 captures with no renderer errors.
+- Theme caveat: OMP uses OMP dark-theme ANSI; Pi-Swarm harness uses a minimal semantic ANSI theme. The two palettes are similar but not guaranteed pixel-identical, so interpret layout/cards rather than exact color comparison.
+
+### Observed renderer-output differences
+
+These claims refer only to the fixture captures above (not all possible tool states):
+
+- Bash: OMP produces a three-line framed call card and a framed result card with command/action context, output heading, bounded preview, and an expansion hint. Pi-Swarm’s production Bash component currently returns unframed output rows; call/result context appears as plain rows. At width 80, success result: OMP 15 lines vs Pi-Swarm 7; error result: 15 vs 7; expanded: 18 vs 15. (`artifacts/tool-cards/side-by-side-80.txt`, `bash-call` through `bash-expanded` and `SUMMARY`.)
+- Read: OMP emits a framed, path-and-line-range header and code-like excerpt. Pi-Swarm’s generic fallback shows the result with a generic earlier-lines expansion notice, without a Read action/path card. In the `read-success` fixture, OMP 15 lines vs fallback 6; in `read-error`, 4 vs 2. OMP call is rendered; generic Pi-Swarm fallback has no call renderer.
+- Grep: OMP adds an icon, query/count/file metadata and a grouped file tree. Pi-Swarm fallback is plain output and omits the call card. The lines may be similar in count for this fixture, but the structure and semantic header differ. Empty results also differ: OMP retains a query/status treatment; fallback emits the generic “No matches found” text.
+- Glob: OMP labels the pattern/scope, gives the file count, and uses a tree/list with a bounded preview. Generic fallback prints paths as plain text and a generic earlier-lines hint.
+- Web Search: OMP adds a response status/header and a concise result summary; generic fallback emits only the fixture text. The test fixture passes structured result details to both renderers; the generic adapter displays content rather than creating a provider/source card.
+
+The numeric line counts describe the renderer-returned lines in these specific fixtures; they are not quality scores. See the paired text transcript or JSON records for full evidence, including exact output and widths. These captures support prioritizing tool-specific summaries and framing for Read, local search, and web results while preserving Bash’s current dedicated status/output behavior for a separate design review.

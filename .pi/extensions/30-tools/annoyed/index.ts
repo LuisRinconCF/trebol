@@ -2,7 +2,8 @@ import { AnnoyedStore, boundTranscript, type AnnoyedStatus, type AnnoyedSeverity
 import { registerAnnoyanceNudgeHook } from "./nudge.ts";
 import { withSwarmToolSurface } from "../../../lib/runtime/swarm-tool-surface.ts";
 import { randomBytes } from "node:crypto";
-import { annoyedPublicTitle, annoyedRepository, annoyedResultXML, normalizeAnnoyedSeverity, publishAnnoyedIssue } from "../../../lib/tools/swarm-annoyed-publish.ts";
+import { annoyedMarker, annoyedPublicTitle, annoyedRepository, annoyedResultXML, normalizeAnnoyedSeverity, publishAnnoyedIssue, reconcileAnnoyedIssue } from "../../../lib/tools/swarm-annoyed-publish.ts";
+import { annoyedProjectFingerprint, runAnnoyedJudge, verifiedProjectRepository, redactAnnoyedReport } from "../../../lib/tools/swarm-annoyed-routing.ts";
 
 const schema = {
   type: "object", required: ["issue"], additionalProperties: false,
@@ -22,7 +23,7 @@ export default function annoyedExtension(rawPi: any) {
   registerAnnoyanceNudgeHook(pi);
   const store = new AnnoyedStore();
   pi.registerTool({
-    name: "annoyed", label: "Annoyed", description: "Record actionable product friction in the local Annoyed kanban board. Use once for a concrete defect; do not report successful output prose, expected failures, permission denials, or cancellations.", parameters: schema,
+    name: "annoyed", label: "Annoyed", description: "Record a user-approved product friction report. Non-actionable or uncertain submissions are routed to explicit Trebol triage. Do not change failure nudges into reports of every failure.", parameters: schema,
     async execute(toolCallId: string, params: any, signal: AbortSignal, _onUpdate: unknown, ctx: any) {
       if (signal.aborted) throw new Error("annoyed: cancelled");
       // annoyed.go Run: validate, publish through gh, then the XML result.
@@ -32,23 +33,54 @@ export default function annoyedExtension(rawPi: any) {
       const issue = text(params?.issue).trim();
       if (issue === "") return fail("annoyed: issue is required");
       const severity = normalizeAnnoyedSeverity(params?.severity);
-      let repository: string;
-      try { repository = annoyedRepository(); } catch (e) { return fail((e as Error).message); }
+      const cwd = typeof ctx?.cwd === "string" ? ctx.cwd : process.cwd();
+      let projectRepository: string | undefined;
+      let projectResolution = "verified";
+      try { projectRepository = await verifiedProjectRepository(cwd, signal); if (!projectRepository) projectResolution = "missing or non-GitHub project remote"; }
+      catch (e) { if (signal.aborted || (e as Error).message === "cancelled") throw new Error("annoyed: cancelled"); projectResolution = "project remote verification failed"; }
+      let harnessRepository: string;
+      try { harnessRepository = annoyedRepository(); } catch (e) { return fail((e as Error).message); }
       const entries = ctx?.sessionManager?.getBranch?.() ?? ctx?.sessionManager?.getEntries?.();
       const conversationId = ctx?.sessionManager?.getSessionId?.() ?? ctx?.sessionId;
-      const result = await store.upsert({
-        issue: text(params.issue), title: text(params.title), category: text(params.category) || "other", severity: params.severity,
-        observed: text(params.observed), expected: text(params.expected), evidence: params.evidence, acceptanceTests: params.acceptance_tests,
-        tags: params.tags, conversationId, projectCwd: pi.getCwd?.() ?? process.cwd(), transcript: Array.isArray(entries) ? boundTranscript(entries.slice(-80)) : undefined,
-        metadata: { toolCallId }, source: "pi-annoyed-tool",
-      });
-      const body = [`## Agent complaint\n\n${issue}`, params?.observed ? `## Observed\n\n${text(params.observed)}` : "", params?.expected ? `## Expected\n\n${text(params.expected)}` : "",
-        Array.isArray(params?.evidence) && params.evidence.length ? `## Evidence\n\n${params.evidence.map((e: unknown) => `- ${String(e)}`).join("\n")}` : "",
-        Array.isArray(params?.acceptance_tests) && params.acceptance_tests.length ? `## Acceptance tests\n\n${params.acceptance_tests.map((e: unknown) => `- ${String(e)}`).join("\n")}` : "",
-        `## Local board\n\n${result.issue.id} (${result.issue.status}) — ${store.exportPath}`].filter(Boolean).join("\n\n");
+      const fields = { issue: redactAnnoyedReport(issue).slice(0, 1000), category: redactAnnoyedReport(text(params.category)).slice(0, 100), observed: redactAnnoyedReport(text(params.observed)).slice(0, 1500), expected: redactAnnoyedReport(text(params.expected)).slice(0, 1500), evidence: (Array.isArray(params.evidence) ? params.evidence : []).slice(0, 8).map((x: unknown) => redactAnnoyedReport(String(x)).slice(0, 400)), acceptanceTests: (Array.isArray(params.acceptance_tests) ? params.acceptance_tests : []).slice(0, 8).map((x: unknown) => redactAnnoyedReport(String(x)).slice(0, 400)) };
+      const fingerprint = annoyedProjectFingerprint(projectRepository, { ...fields, workspaceCwd: cwd });
+      const receiptOwner = randomBytes(16).toString("hex");
+      let result = await store.reserve({ ...fields, issue: fields.issue, title: redactAnnoyedReport(text(params.title)).slice(0, 240), category: fields.category || "other", severity: params.severity, conversationId, projectCwd: cwd, transcript: Array.isArray(entries) ? boundTranscript(entries.slice(-80)) : undefined, fingerprint, metadata: { toolCallId }, source: "pi-annoyed-tool", receiptOwner });
+      const metadata: any = result.issue.metadata ?? {};
+      if (metadata.publicationUrl) return { content: [{ type: "text", text: annoyedResultXML(fields.issue, metadata.publicationUrl, metadata.destination, severity, { ...metadata.verdict, reason: metadata.reason, triage: metadata.triage }) }], details: { duplicate: true, publication_url: metadata.publicationUrl, repository: metadata.destination, scope: metadata.verdict?.scope, reason: metadata.verdict?.reason, publication_status: metadata.publicationStatus } };
+      if ((metadata.publicationStatus === "posting" || metadata.publicationStatus === "unresolved") && metadata.destination && metadata.marker) {
+        try {
+          const url = await reconcileAnnoyedIssue(metadata.destination, metadata.marker, signal);
+          await store.setMetadata(result.issue.id, { publicationStatus: "confirmed", publicationUrl: url });
+          return { content: [{ type: "text", text: annoyedResultXML(fields.issue, url, metadata.destination, severity, { ...metadata.verdict, reason: metadata.reason, triage: metadata.triage }) }], details: { duplicate: true, publication_url: url, repository: metadata.destination, scope: metadata.verdict?.scope, reason: metadata.reason, triage: metadata.triage, publication_status: "confirmed" } };
+        } catch (error) { return fail((error as Error).message); }
+      }
+      if (!result.reserved) return fail("annoyed: report reservation is owned by another invocation; refusing duplicate judge or publication");
+      let verdict = metadata.verdict;
+      if (!verdict) {
+        const fallback = { scope: "uncertain", reason: "Judge interrupted; retained for Trebol triage without repeating consultation" };
+        await store.setMetadata(result.issue.id, { verdict: fallback, publicationStatus: "judging" });
+        const judged = await runAnnoyedJudge(pi, { report: fields, project: projectRepository ?? projectResolution, cwd, model: ctx?.model, signal });
+        if (judged.cancelled || signal.aborted) {
+          await store.setMetadata(result.issue.id, { publicationStatus: "ready" });
+          throw new Error("annoyed: cancelled");
+        }
+        verdict = judged.verdict;
+      }
+      const triage = verdict.scope !== "harness" && !(verdict.scope === "project" && projectRepository);
+      const repository = triage ? harnessRepository : verdict.scope === "harness" ? harnessRepository : projectRepository!;
+      const marker = metadata.marker ?? annoyedMarker();
+      const destination = repository.toLowerCase();
+      const reason = projectRepository ? verdict.reason : `${projectResolution}; ${verdict.reason}`;
+      await store.setMetadata(result.issue.id, { verdict, destination, marker, publicationStatus: "reserved", projectResolution, triage, reason, receiptOwner });
+      if (signal.aborted) { await store.setMetadata(result.issue.id, { publicationStatus: "ready" }); throw new Error("annoyed: cancelled"); }
+      await store.setMetadata(result.issue.id, { publicationStatus: "posting" });
+      const clean = (s: string) => redactAnnoyedReport(s).slice(0, 1500);
+      const body = [`## Agent report\n\n${clean(fields.issue)}`, `**Scope:** ${verdict.scope} — ${clean(reason)}`, `**Triage:** ${triage ? "Trebol ownership review requested" : "No"}`, `**Report marker:** \`${marker}\``, fields.observed ? `## Observed\n\n${clean(fields.observed)}` : "", fields.expected ? `## Expected\n\n${clean(fields.expected)}` : "", fields.evidence.length ? `## Evidence\n\n${fields.evidence.map((e: string) => `- ${clean(e)}`).join("\n")}` : "", fields.acceptanceTests.length ? `## Acceptance tests\n\n${fields.acceptanceTests.map((e: string) => `- ${clean(e)}`).join("\n")}` : ""].filter(Boolean).join("\n\n");
       let publicationURL: string;
-      try { publicationURL = await publishAnnoyedIssue(repository, annoyedPublicTitle(issue, severity), body); } catch (e) { return fail((e as Error).message); }
-      return { content: [{ type: "text", text: annoyedResultXML(issue, publicationURL, repository, severity) }], details: { issue: result.issue, duplicate: result.duplicate, database: store.databasePath, publication_url: publicationURL, repository } };
+      try { publicationURL = await publishAnnoyedIssue(repository, annoyedPublicTitle(fields.issue, severity), body, undefined, signal); } catch (e) { if (signal.aborted) throw new Error("annoyed: cancelled"); await store.setMetadata(result.issue.id, { publicationStatus: "unresolved", publicationError: redactAnnoyedReport((e as Error).message).slice(0, 500) }); return fail((e as Error).message); }
+      await store.setMetadata(result.issue.id, { publicationStatus: "confirmed", publicationUrl: publicationURL });
+      return { content: [{ type: "text", text: annoyedResultXML(fields.issue, publicationURL, repository, severity, { scope: verdict.scope, reason, triage }) }], details: { duplicate: !result.reserved, publication_url: publicationURL, repository, scope: verdict.scope, reason, triage, publication_status: "confirmed" } };
     },
   });
   pi.on?.("session_shutdown", () => store.close());

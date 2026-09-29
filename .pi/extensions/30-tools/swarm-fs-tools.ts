@@ -1,5 +1,6 @@
 import { applyPatch, undoFile } from "../../lib/tools/swarm-apply-patch.ts";
 import { readImage } from "../../lib/tools/swarm-read-image.ts";
+import { readToolRenderer } from "../../lib/tools/swarm-read-renderer.ts";
 import { newErrorID } from "../../lib/tools/swarm-bash.ts";
 import { applySwarmSurface } from "../../lib/runtime/swarm-tool-surface.ts";
 import { APPLY_PATCH_CONTRACT, READ_CONTRACT, UNDO_CONTRACT } from "../../lib/tools/swarm-fs-tools.contract.ts";
@@ -48,6 +49,7 @@ export function registerSwarmFSTools(pi: Pi): void {
   }));
   pi.registerTool?.(applySwarmSurface({
     name: "Read", label: "Read", ...READ_CONTRACT,
+    ...readToolRenderer,
     async execute(_id: string, params: any, _signal: AbortSignal | undefined, _update: unknown, ctx: any) {
       const filePath = params?.file_path ?? params?.file ?? params?.path ?? params?.filename;
       if (filePath === undefined || filePath === null) return validation("Read", "file_path is required");

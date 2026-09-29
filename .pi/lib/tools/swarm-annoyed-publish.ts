@@ -14,9 +14,10 @@
  * record) and never reaches the model.
  */
 import { spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { goQuote } from "./swarm-bash.ts";
 
-export const DEFAULT_ANNOYED_REPOSITORY = "Swarm-Code/mono";
+export const DEFAULT_ANNOYED_REPOSITORY = "cloverinternational/trebol";
 const MAX_TITLE_CHARS = 120;
 const repositoryPattern = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 
@@ -45,36 +46,66 @@ export function annoyedPublicTitle(issue: string, severity: string): string {
 /** Go exec error text for a non-zero exit / signal (os/exec ExitError.Error()). */
 const exitText = (code: number | null, signal: NodeJS.Signals | null) => code !== null ? `exit status ${code}` : `signal: ${String(signal ?? "").toLowerCase()}`;
 
-export interface GHRunner { (args: string[], stdin: string): Promise<{ code: number | null; signal: NodeJS.Signals | null; stdout: string; stderr: string; spawnError?: Error }> }
-const defaultGH: GHRunner = (args, stdin) => new Promise((resolveP) => {
+export interface GHRunner { (args: string[], stdin: string, signal?: AbortSignal): Promise<{ code: number | null; signal: NodeJS.Signals | null; stdout: string; stderr: string; spawnError?: Error }> }
+const defaultGH: GHRunner = (args, stdin, abortSignal) => new Promise((resolveP) => {
+  if (abortSignal?.aborted) return resolveP({ code: null, signal: null, stdout: "", stderr: "", spawnError: new Error("cancelled") });
   const child = spawn("gh", args, { env: { ...process.env, GH_PROMPT_DISABLED: "1" }, stdio: ["pipe", "pipe", "pipe"] });
   const out: Buffer[] = [], err: Buffer[] = [];
-  child.stdout.on("data", (d: Buffer) => out.push(d)); child.stderr.on("data", (d: Buffer) => err.push(d));
+  let bytes = 0;
+  const abort = () => child.kill("SIGKILL"); abortSignal?.addEventListener("abort", abort, { once: true });
+  const timer = setTimeout(abort, 30_000);
+  const collect = (target: Buffer[], d: Buffer) => { bytes += d.length; if (bytes > 4 * 1024 * 1024) abort(); else target.push(d); };
+  child.stdout.on("data", (d: Buffer) => collect(out, d)); child.stderr.on("data", (d: Buffer) => collect(err, d));
+  child.stdin.on("error", () => undefined);
   child.on("error", (e) => resolveP({ code: null, signal: null, stdout: "", stderr: "", spawnError: e }));
-  child.on("close", (code, signal) => resolveP({ code, signal, stdout: Buffer.concat(out).toString(), stderr: Buffer.concat(err).toString() }));
+  child.on("close", (code, signal) => { clearTimeout(timer); abortSignal?.removeEventListener("abort", abort); resolveP({ code, signal, stdout: Buffer.concat(out).toString(), stderr: Buffer.concat(err).toString() }); });
   child.stdin.end(stdin);
 });
 
-export async function publishAnnoyedIssue(repository: string, title: string, body: string, gh: GHRunner = defaultGH): Promise<string> {
+export async function reconcileAnnoyedIssue(repository: string, marker: string, signal?: AbortSignal, gh: GHRunner = defaultGH): Promise<string> {
+  if (signal?.aborted) throw new Error("annoyed: cancelled");
+  const lookup = await gh(["api", "--paginate", "--slurp", "--method", "GET", `repos/${repository}/issues?state=all&per_page=100`], "", signal);
+  if (signal?.aborted) throw new Error("annoyed: cancelled");
+  if (lookup.code !== 0 || lookup.spawnError) throw new Error("annoyed: publication unresolved; verification lookup failed");
+  let issues: any[];
+  try { const decoded = JSON.parse(lookup.stdout); if (!Array.isArray(decoded)) throw new Error(); issues = decoded.flat(); }
+  catch { throw new Error("annoyed: publication unresolved; verification response invalid"); }
+  const matches = issues.filter(item => !item?.pull_request && typeof item?.body === "string" && item.body.includes(`**Report marker:** \`${marker}\``) && validIssueURL(String(item.html_url), repository, item.number));
+  if (matches.length !== 1) throw new Error("annoyed: publication unresolved; unique exact marker not visible; refusing blind retry");
+  return matches[0].html_url;
+}
+
+export async function publishAnnoyedIssue(repository: string, title: string, body: string, gh: GHRunner = defaultGH, signal?: AbortSignal): Promise<string> {
   const endpoint = `repos/${repository}/issues`;
-  const result = await gh(["api", "--method", "POST", endpoint, "--input", "-"], JSON.stringify({ title, body }));
-  if (result.spawnError) throw new Error(`annoyed: GitHub API POST ${endpoint}: ${result.spawnError.message}`);
+  if (signal?.aborted) throw new Error("annoyed: cancelled");
+  const resolveAmbiguous = async () => {
+    const marker = markerFromBody(body);
+    if (!marker) throw new Error("annoyed: publication unresolved; missing marker");
+    return reconcileAnnoyedIssue(repository, marker, signal, gh);
+  };
+  let result;
+  try { result = await gh(["api", "--method", "POST", endpoint, "--input", "-"], JSON.stringify({ title, body }), signal); }
+  catch (error) { if (signal?.aborted) throw new Error("annoyed: cancelled"); return resolveAmbiguous(); }
+  if (result.spawnError) return resolveAmbiguous();
   if (result.code !== 0) {
-    const detail = result.stderr.trim();
-    const exit = exitText(result.code, result.signal);
-    throw new Error(detail ? `annoyed: GitHub API POST ${endpoint}: ${exit}: ${detail}` : `annoyed: GitHub API POST ${endpoint}: ${exit}`);
+    return resolveAmbiguous();
   }
   let created: any;
-  try { created = JSON.parse(result.stdout); } catch (e) { throw new Error(`annoyed: decode GitHub API POST ${endpoint} response: ${(e as Error).message}`); }
+  try { created = JSON.parse(result.stdout); } catch { return resolveAmbiguous(); }
   const url = String(created?.html_url ?? "");
   let parsed: URL | undefined; try { parsed = new URL(url); } catch { /* invalid */ }
-  if (!parsed || parsed.protocol !== "https:" || !parsed.host || !parsed.pathname.includes("/issues/")) throw new Error("annoyed: gh returned invalid issue URL");
+  if (!parsed || parsed.protocol !== "https:" || parsed.hostname !== "github.com" || parsed.pathname !== `/${repository}/issues/${String(created?.number ?? "")}`) return resolveAmbiguous();
   return url;
 }
 
+export function annoyedMarker(): string { return `swarm-annoyed:${randomBytes(16).toString("hex")}`; }
+const markerFromBody = (body: string) => body.match(/\*\*Report marker:\*\* `([^`]+)`/)?.[1] ?? "";
+const validIssueURL = (url: string, repository: string, number: unknown) => { try { const parsed = new URL(url); return parsed.protocol === "https:" && parsed.hostname === "github.com" && parsed.pathname === `/${repository}/issues/${String(number)}`; } catch { return false; } };
+
 /** tools.NewXML("result").Attr("status","ok").Field(…)[.Attr("severity", …)] — attrs in call order. */
-export function annoyedResultXML(issue: string, publicationURL: string, repository: string, severity: string): string {
+export function annoyedResultXML(issue: string, publicationURL: string, repository: string, severity: string, routing?: { scope?: string; reason?: string; triage?: boolean }): string {
   const attrs = [`status="ok"`, ...(severity ? [`severity=${goQuote(severity)}`] : [])];
-  const field = (tag: string, value: string) => `  <${tag}><![CDATA[${value}]]></${tag}>\n`;
-  return `<result ${attrs.join(" ")}>\n${field("issue", issue)}${field("publication_url", publicationURL)}${field("repository", repository)}</result>`;
+  const field = (tag: string, value: string) => `  <${tag}><![CDATA[${value.replace(/\]\]>/g, "]]]]><![CDATA[>")}]]></${tag}>\n`;
+  const route = routing ? field("scope", routing.scope ?? "uncertain") + field("reason", routing.reason ?? "") + field("triage", String(routing.triage ?? false)) : "";
+  return `<result ${attrs.join(" ")}>\n${field("issue", issue)}${field("publication_url", publicationURL)}${field("repository", repository)}${route}</result>`;
 }

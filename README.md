@@ -32,6 +32,10 @@ obsolete parity probes were retired in v0.4.0.
 
 ## Capabilities
 
+### Autonomous mode
+
+Run `/auto on`, then send a task. `/auto status` checks the mode and `/auto off` stops future continuations; it resets on session change or shutdown. The existing Pi-Swarm footer shows `auto:on` or `auto:off` on its metrics row and updates immediately after mode changes; reload starts off. Auto mode reviews bounded prior user/assistant excerpts and tracked-worktree status, steers the current agent to inspect relevant code, and continues only when its completed response explicitly signals a concrete next step. It does not change provider or policy limits, guarantee unlimited runtime, or bypass user approvals. On relevant runnable web UI tasks, it asks the agent to verify in a headed `agent-browser` session with screenshots saved under ignored `artifacts/auto/` and report visible and console/network evidence. If the browser or app is unavailable, the agent should report that limitation rather than claim verification.
+
 ### Runtime and context
 
 - Swarm system-prompt and context assembly with provenance and bounded inputs
@@ -180,6 +184,20 @@ context files are discovered:
 ```bash
 pi
 ```
+
+### Global installation
+
+The repository is also a Pi package. Install the checkout globally (the
+default scope; do not pass `-l`) with:
+
+```bash
+pi install https://github.com/cloverinternational/trebol
+```
+
+For a local checkout, run `pi install /absolute/path/to/trebol`. Pi adds the
+source to user settings, making the extensions available from other projects.
+The package's `prepare` script builds runtime dependencies during installation.
+To remove the global package, run `pi remove <the-same-source>`.
 
 ## Usage
 
