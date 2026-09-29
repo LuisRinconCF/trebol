@@ -84,11 +84,13 @@ function targets(value: unknown, field: string): void {
 function coerceTaskRef(value: unknown): unknown {
   if (typeof value === "number" && Number.isInteger(value)) return String(value);
   if (Array.isArray(value)) return value.map(coerceTaskRef);
-  if (isObj(value)) {
-    if (typeof value.ref === "number" && Number.isInteger(value.ref)) return { ...value, ref: String(value.ref) };
-    for (const key of ["addBlocks", "addBlockedBy"]) if (Array.isArray(value[key])) value = { ...value, [key]: coerceTaskRef(value[key]) };
+  if (!isObj(value)) return value;
+  if (typeof value.ref === "number" && Number.isInteger(value.ref)) return { ...value, ref: String(value.ref) };
+  const next: Record<string, unknown> = { ...value };
+  for (const key of ["addBlocks", "addBlockedBy"]) {
+    if (Array.isArray(next[key])) next[key] = coerceTaskRef(next[key]);
   }
-  return value;
+  return next;
 }
 
 function validateQuestions(value: unknown): void {
