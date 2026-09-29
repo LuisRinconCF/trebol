@@ -183,7 +183,7 @@ When changing discovery, preserve these invariants:
 | Layer (load order) | Entrypoints |
 | --- | --- |
 | `00-runtime` | `cache-telemetry`, `swarm-update`, `bootstrap`, `hooks`, `swarm-runtime`, `swarm-transport-parity` |
-| `10-context` | `autogenskills`, `prompt-context-configure`, `swarm-plan-mode`, `swarm-prompt`, `swarm-skills`, `swarm-thinking`, `system-inspector`, `system-prompts` |
+| `10-context` | `autogenskills`, `prompt-context-configure`, `swarm-plan-mode`, `swarm-prompt`, `swarm-auto`, `swarm-skills`, `swarm-thinking`, `system-inspector`, `system-prompts` |
 | `20-policy` | `swarm-disk-hooks`, `project-init` |
 | `30-tools` | `annoyed/`, `codemode`, `control-task-tools`, `history-search`, `ask-user/`, `paseo`, `research-tools`, `swarm-goal`, `swarm-agent-tools`, `swarm-background-bash`, `swarm-bash`, `swarm-fs-tools`, `swarm-history-vault-tools`, `taskmanage`, `vault` |
 | `40-state` | `memory-history`, `task-candidate-capture`, `knowledge-enrichment`, `candidate-memory-review`, `jev-knowledge-audit`, `memory-maintenance`, `swarm-conversation-metadata` |
@@ -222,6 +222,7 @@ belongs in `packages/policy/policy`, and rendering belongs in the extension/rend
 | `web_fetch`, `deepwiki`, `browser_get_page` | `.pi/extensions/30-tools/research-tools.ts` | Extension-local bounded evidence fetcher; provenance and network policy are coupled requirements. |
 | `codemode` | `.pi/extensions/30-tools/codemode.ts` | `packages/tools/codemode/src/` interpreter, schema, OpenAPI, and runtime (`@pi-swarm/codemode`, consumed as TypeScript source); it composes registered tools and must not bypass policy. |
 | `enter_plan_mode`, `exit_plan_mode` | `.pi/extensions/10-context/swarm-plan-mode.ts` | `.pi/lib/context/swarm-plan-mode.ts`; plan approval is separate from implementation. |
+| `/auto on|off|status` | `.pi/extensions/10-context/swarm-auto.ts` | Opt-in session-local autonomous continuation. Contributes `auto:on/off` through the existing `pi-swarm-footer-segments` registry; it never replaces the footer slot. `.pi/lib/context/auto-mode-state.ts` exposes session-ID-scoped state to ask-user: active auto mode uses a bounded tool-less consultation before any dialog, validates the answer, and labels it autonomous (never user consent). Failure returns an error without opening UI. `before_agent_start` supplies bounded branch and tracked-worktree context; settled `agent_end` follows an explicit progress marker only while idle. No global provider limits or policy gates are changed. |
 | `ask_user_question` | `.pi/extensions/30-tools/ask-user/index.ts` | Fork of `edlsh/pi-ask-user` v0.15.0 (MIT, `LICENSE` beside it); local edits are marked `pi-swarm:`. Upstream `bun:test` suite not carried; `.pi/test/tools/ask-user-layout.test.ts` covers the layout helper. |
 | `control_plane_status` | `.pi/extensions/50-ui/control-panel.ts` | `packages/runtime/runtime-contracts/src/control-plane.ts`, `control-plane-store.ts`; dashboard is read-only. |
 | `daemon_status`, task/run tools | `.pi/extensions/00-runtime/swarm-runtime.ts`, `.pi/extensions/30-tools/control-task-tools.ts` | `packages/runtime/runtime-contracts/src/daemon-rpc.ts`, `control-task.ts`; unavailable daemon must fail closed. Daemon goal/loop APIs remain available to non-TUI consumers, but are not registered in the TUI. |
@@ -230,7 +231,7 @@ belongs in `packages/policy/policy`, and rendering belongs in the extension/rend
 | `vault_add`, `vault_approve`, `vault_exec`, `vault_list`, `vault_two_person_status` | `.pi/extensions/30-tools/swarm-history-vault-tools.ts` | `.pi/lib/tools/swarm-vault-tools.ts`; never expose secret values. |
 | `vault` | `.pi/extensions/30-tools/vault.ts` | `.pi/lib/tools/swarm-vault-tools.ts`; transparent global credential storage, with explicit user-risk warning. |
 | `mcp__<server>__<tool>` | `.pi/extensions/00-runtime/swarm-runtime.ts`, `.pi/extensions/30-tools/swarm-websearch.ts` / `packages/tools/mcp/src/index.ts` | Provider-neutral declared MCP bridge; manifests, allowlists, transport, and auth are the seam. |
-| `annoyed` | `.pi/extensions/30-tools/annoyed/index.ts` | `.pi/extensions/30-tools/annoyed/store.ts`; issue persistence is separate from the nudge hook. |
+| `annoyed` | `.pi/extensions/30-tools/annoyed/index.ts` | `.pi/extensions/30-tools/annoyed/store.ts`, `.pi/lib/tools/swarm-annoyed-routing.ts`, and `swarm-annoyed-publish.ts`; a tool-less ownership judge routes project reports only to a verified active-workspace GitHub remote and Trebol triages upstream/non-actionable/uncertain/judge-failure/missing-remote cases. Publication receipts are SQLite metadata with a stable remote marker; ambiguous results are never blindly retried and SQLite/GitHub is not exactly-once. Transcript stays local; nudge behavior remains separate. |
 
 Model-facing workflow wording is adapted by
 `packages/context/prompt/src/workflow-guidance.ts` in prompt presets, Forge

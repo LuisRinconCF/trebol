@@ -108,7 +108,11 @@ const fail = (code: string, message: string, retryable = false): Failure => ({ c
  * before.
  */
 export function splitEvidence(evidence: string): string[] {
-  const parts = evidence.split(/[;,]\s+(?=[^\s;,]*(?:\/|\.[A-Za-z0-9]{1,8}(?:#|$)))/g)
+  // Whitespace after the separator is optional: agents cite "a.md#X;b.md#Y"
+  // as often as "a.md#X; b.md#Y". The lookahead still keeps separators that
+  // are part of a heading ("a.md#Worklog, caveats") unsplit, because the text
+  // after them does not start another path-ish reference.
+  const parts = evidence.split(/[;,]\s*(?=[^\s;,]*(?:\/|\.[A-Za-z0-9]{1,8}(?:#|$)))/g)
     .map(part => part.trim()).filter(Boolean);
   return parts.length ? parts : [evidence.trim()];
 }
@@ -496,14 +500,21 @@ export class TaskManager {
   }
   private find(id: string): Task | undefined { return this.state.tasks.find(t => t.id === id); }
   private resolve(ref: Ref | undefined, local: Record<string, string>): string | Failure {
+    // Canonical IDs are decimal strings, but callers emit them as JSON numbers
+    // (trebol#33/#35/#36); accept the integer form everywhere a ref is taken.
+    if (typeof ref === "number" && Number.isInteger(ref)) ref = String(ref);
+    if (isObj(ref) && typeof ref.ref === "number" && Number.isInteger(ref.ref)) ref = { ...ref, ref: String(ref.ref) };
     if (typeof ref === "string") {
-      // A real task ID wins. Otherwise accept an earlier key from this batch
-      // as a safe convenience for model-generated dependency arrays.
-      return this.find(ref) ? ref : local[ref] ?? ref;
+      // A real task ID wins. Otherwise accept a key from this batch or the
+      // persistent ledger, matching the {"ref":…} form below so dependency
+      // arrays resolve the same targets regardless of ref shape.
+      return this.find(ref) ? ref : local[ref] ?? this.state.keys[ref] ?? ref;
     }
     if (!ref) return fail("validation_failed", "taskId is required");
     if (ref.field && ref.field !== "taskId") return fail("validation_failed", "reference field must be taskId");
-    const id = local[ref.ref] ?? this.state.keys[ref.ref];
+    // Keys resolve first, then a literal task ID: the documented {"ref":…} form
+    // must also reach a task that list already shows under that ID (trebol#33).
+    const id = local[ref.ref] ?? this.state.keys[ref.ref] ?? (this.find(ref.ref) ? ref.ref : undefined);
     return id ?? fail("reference_failed", `reference ${ref.ref} is not available`);
   }
   private inferCategory(text: string): Category {
@@ -575,6 +586,8 @@ export class TaskManager {
   }
   private validateRef(value: unknown, field: string): Failure | undefined {
     if (value === undefined) return undefined;
+    if (typeof value === "number" && Number.isInteger(value)) value = String(value);
+    else if (isObj(value) && typeof value.ref === "number" && Number.isInteger(value.ref)) value = { ...value, ref: String(value.ref) };
     if (typeof value === "string") {
       return value.trim() || field === "parentTaskId"
         ? undefined
@@ -661,7 +674,18 @@ export class TaskManager {
         return start >= 1 && end >= start && end <= text.split("\n").length;
       }
       if (!/\.md$/i.test(file)) return false;
-      return text.split("\n").some(line => /^#{1,6}\s+/.test(line) && (line.replace(/^#{1,6}\s+/, "").trim() === section || line.replace(/^#{1,6}\s+/, "").trim().toLowerCase().replace(/[^\p{L}\p{N} _-]/gu, "").replace(/ /g, "-") === section));
+      // Headings legally contain ?, parentheses, commas and other punctuation
+      // (trebol#36). Match the quoted section exactly, as a GitHub-style dash
+      // slug, or punctuation-insensitively on both sides, so an agent quoting
+      // the heading with or without its punctuation still resolves.
+      const loose = (value: string) => value.trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+      return text.split("\n").some(line => {
+        if (!/^#{1,6}\s+/.test(line)) return false;
+        const heading = line.replace(/^#{1,6}\s+/, "").trim();
+        return heading === section ||
+          heading.toLowerCase().replace(/[^\p{L}\p{N} _-]/gu, "").replace(/ /g, "-") === section ||
+          loose(heading) === loose(section);
+      });
     } catch { return false; }
   }
   execute(params: Params, signal?: AbortSignal): Batch {
@@ -966,7 +990,10 @@ export function registerTaskManage(pi: { registerTool(tool: unknown): void; appe
         const offending = /^operation "([^"]+)"/.exec(invalid)?.[1]
           ?? /^duplicate operation key "([^"]+)"/.exec(invalid)?.[1];
         const error = new Error(`Error executing TaskManage: validation failed for TaskManage: ${invalid} (error_id=err_${randomBytes(10).toString("hex")})`);
-        Object.assign(error, { details: { batch: { status: "failed", results: normalizedParams.operations?.map((operation, index) => {
+        // An unparseable params object normalizes to undefined; the validation
+        // message above is still the primary payload, so never crash the error
+        // path while decorating it with per-operation details.
+        Object.assign(error, { details: { batch: { status: "failed", results: (normalizedParams as Params | undefined)?.operations?.map((operation, index) => {
           const key = typeof operation?.key === "string" ? operation.key : String(index);
           const isOffender = offending === undefined ? index === 0 : key === offending;
           return { key, op: operation?.op, status: isOffender ? "failed" : "skipped", ...(isOffender ? { error: { code: "validation_failed", message: invalid, retryable: false } } : {}) };

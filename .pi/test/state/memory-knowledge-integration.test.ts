@@ -24,6 +24,17 @@ describe("memory_history knowledge integration", () => {
     await call(reloaded, { operation: "delete", scope: "repository", id: corrected.knowledge[0].id, expectedRevision: corrected.knowledge[0].revision });
     expect((await call(reloaded, { operation: "search", scope: "repository", query: "fact" })).knowledge).toEqual([]);
   });
+  it("accepts note as a remember alias in an explicit worktree scope and rejects empty note", async () => {
+    const root = mkdtempSync(join(tmpdir(), "memory-history-")); roots.push(root); process.env.PI_SWARM_MEMORY_DIR = join(root, "store");
+    const tool = harness(root);
+    const written = await tool.execute("id", { operation: "remember", note: "worktree note", scope: "worktree", namespace: "" });
+    expect(written.isError ? written.content[0].text : undefined).toBeUndefined();
+    const record = JSON.parse(written.content[0].text);
+    expect(record.knowledge[0].text).toBe("worktree note"); expect(record.knowledge[0].scope).toBe("worktree");
+    expect(openKnowledgeStore({ cwd: root, scope: "worktree", root: join(root, "store") }).read(record.knowledge[0].id)?.text).toBe("worktree note");
+    expect((await tool.execute("id", { operation: "remember", note: "   ", scope: "worktree" })).isError).toBe(true);
+    expect((await tool.execute("id", { operation: "remember", scope: "worktree" })).isError).toBe(true);
+  });
   it("labels legacy reads unverified, preserves them, and denies global mutation", async () => {
     const root = mkdtempSync(join(tmpdir(), "memory-history-")); roots.push(root); process.env.PI_SWARM_MEMORY_DIR = join(root, "store"); rememberShared(root, "repository", "old legacy fact");
     const tool = harness(root); const result = await call(tool, { operation: "search", scope: "repository", query: "legacy" }); expect(result.legacy[0]).toMatchObject({ status: "unverified", verified: false });

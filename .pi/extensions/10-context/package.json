@@ -9,6 +9,7 @@
       "prompt-context-configure.ts",
       "swarm-plan-mode.ts",
       "swarm-prompt.ts",
+      "swarm-auto.ts",
       "swarm-skills.ts",
       "swarm-thinking.ts",
       "system-inspector.ts",

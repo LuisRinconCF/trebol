@@ -6,7 +6,7 @@ import { MEMORY_REVIEW_GUIDANCE } from "../../lib/context/memory-guidance.ts";
 import { createHash } from "node:crypto";
 import { memoryGate, memorySystemPrompt } from "../../lib/context/memory-ceremony.ts";
 import { readBootstrapSettings, writeBootstrapSettings, runBootstrap, boundSkillDelivery, MAX_BOOTSTRAP_SKILLS, type BootstrapSelection } from "../../../packages/runtime/bootstrap/src/index.ts";
-import { consultModel } from "../../../packages/runtime/bootstrap/src/consult.ts";
+import { consultModel, parseConsultedJson } from "../../../packages/runtime/bootstrap/src/consult.ts";
 import { getSwarmSkillRegistry } from "../../lib/context/swarm-skill-registry.ts";
 import { MemoryHistory, scopeOf } from "../40-state/memory-history.ts";
 import { recallShared } from "../../lib/state/shared-memory.ts";
@@ -174,7 +174,9 @@ export default function bootstrapExtension(pi: any) {
         const skills = registry.list().filter(s => !s.disableModelInvocation).slice(0, 100).map(s => ({ name: s.name, description: s.description, source: s.source, body: "" }));
         const consult = async (request: string) => {
           const raw = await consultModel(model, request, ctx.cwd, signal);
-          return JSON.parse(raw.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, ""));
+          const parsed = parseConsultedJson(raw);
+          if (typeof parsed !== "object" || parsed === null) throw new Error("Invalid selector response");
+          return parsed as Record<string, unknown>;
         };
         let done = 0;
         const select = async (kind: "memory" | "skills" | "combined"): Promise<BootstrapSelection> => {

@@ -1,5 +1,35 @@
 import { spawn } from "node:child_process";
 
+/**
+ * Parse a consultant's JSON reply tolerantly. Small planner models routinely
+ * append prose (or a closing fence with trailing commentary) after the JSON
+ * payload, which made every bootstrap planner call fail with "Unexpected
+ * non-whitespace character after JSON" and degraded the whole ceremony. Strip
+ * a wrapping code fence first, then extract the first balanced JSON object or
+ * array from the text.
+ */
+export function parseConsultedJson(raw: string): unknown {
+  const stripped = raw.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "").trim();
+  try { return JSON.parse(stripped); } catch { /* fall through to extraction */ }
+  const start = stripped.search(/[[{]/);
+  if (start === -1) throw new Error("Bootstrap consultation returned no JSON");
+  const open = stripped[start], close = open === "{" ? "}" : "]";
+  let depth = 0, inString = false, escaped = false;
+  for (let i = start; i < stripped.length; i++) {
+    const ch = stripped[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === open) depth++;
+    else if (ch === close && --depth === 0) return JSON.parse(stripped.slice(start, i + 1));
+  }
+  throw new Error("Bootstrap consultation returned truncated JSON");
+}
+
 /** Isolated leaf consultation: no tools, extensions, context discovery or durable session. */
 export function consultModel(model: string, prompt: string, cwd: string, signal: AbortSignal): Promise<string> {
   return new Promise((resolve, reject) => {

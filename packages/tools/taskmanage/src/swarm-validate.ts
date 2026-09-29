@@ -74,6 +74,25 @@ function targets(value: unknown, field: string): void {
   (value as unknown[]).forEach((raw, i) => target(raw, `${field}[${i}]`));
 }
 
+/**
+ * Canonical task IDs are the decimal strings "1", "2", … returned by
+ * op:create/op:list, so models routinely emit them as JSON numbers
+ * (cloverinternational/trebol#33, #35, #36). Coerce integer task references to
+ * their canonical string form at the normalization boundary; anything else
+ * (floats, non-numeric values) keeps failing validation unchanged.
+ */
+function coerceTaskRef(value: unknown): unknown {
+  if (typeof value === "number" && Number.isInteger(value)) return String(value);
+  if (Array.isArray(value)) return value.map(coerceTaskRef);
+  if (!isObj(value)) return value;
+  if (typeof value.ref === "number" && Number.isInteger(value.ref)) return { ...value, ref: String(value.ref) };
+  const next: Record<string, unknown> = { ...value };
+  for (const key of ["addBlocks", "addBlockedBy"]) {
+    if (Array.isArray(next[key])) next[key] = coerceTaskRef(next[key]);
+  }
+  return next;
+}
+
 function validateQuestions(value: unknown): void {
   if (!Array.isArray(value) || value.length < 1 || value.length > MAX_TASK_QUESTIONS) fail(`questions must contain 1-${MAX_TASK_QUESTIONS} items`);
   const ids = new Set<string>();
@@ -169,12 +188,14 @@ function parseOperation(raw: Record<string, unknown>, index: number): { key: str
 export function normalizeTaskManageParams(params: unknown): unknown {
   if (!isObj(params) || !Array.isArray(params.operations)) return params;
   const optionalScalars = new Set(["description", "activeForm", "category", "priority", "metadata", "owner_id", "status", "active", "addNote", "noteType", "include_audit"]);
+  const refFields = new Set(["taskId", "parentTaskId", "addBlocks", "addBlockedBy"]);
   return {
     ...params,
     operations: params.operations.map(item => {
       if (!isObj(item)) return item;
       const copy = { ...item };
       for (const field of optionalScalars) if (copy[field] === null) delete copy[field];
+      for (const field of refFields) if (copy[field] !== undefined && copy[field] !== null) copy[field] = coerceTaskRef(copy[field]);
       return copy;
     }),
   };
