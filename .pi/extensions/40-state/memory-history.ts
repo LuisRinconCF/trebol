@@ -236,6 +236,7 @@ export default function memoryHistoryExtension(pi: any): void {
           pi.appendEntry?.(MEMORY_ENTRY_TYPE, entry.data);
           return { content: [{ type: "text", text: JSON.stringify({ knowledge: [], legacy: [entry.data] }) }], details: {} };
         }
+        if (selectedScope === "global" || selectedScope === "all") throw new Error("Agent calls cannot write global memory; write repository/worktree scope and ask the user to review with /memory-promote");
         const record = openKnowledgeStore({ cwd, scope: selectedScope === "worktree" ? "worktree" : "repository", root: sharedMemoryRoot(), namespace: params.namespace || "default" }).put({ text: redactKnowledge(text), tags: (params.tags ?? []).map((s: string) => redactKnowledge(String(s))), evidence: [], status: "candidate", kind: "fact", source: "memory_history" });
         return { content: [{ type: "text", text: JSON.stringify({ knowledge: [record], legacy: [] }) }], details: {} };
       }
