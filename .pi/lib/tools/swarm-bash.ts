@@ -17,6 +17,7 @@ import { spawn } from "node:child_process";
 import { existsSync, lstatSync, mkdirSync, openSync, closeSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { constants as osConstants, homedir, tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve, isAbsolute } from "node:path";
+import { framedCard } from "../ui/framed-card.ts";
 import { checkAllowedPath, defaultAllowedPaths, resolvePathForCheck, pathWithinRoot } from "./path-guard.ts";
 
 export const SWARM_BASH_DESCRIPTION =
@@ -184,6 +185,88 @@ export function bashCallComponent(value: string, truncate?: (text: string, width
       const single = rest.some((line) => line.trim() !== "") ? `${first} ⏎…` : first;
       const row = truncate ? truncate(single, width) : fit(single, width);
       return [row.includes("\n") ? fit(row.split("\n")[0]!, width) : row];
+    },
+    invalidate: () => {},
+  };
+}
+
+
+/**
+ * Collapse a styled command (possibly multi-line) to one width-bounded plain
+ * row for a card header: continuation lines become a ` ⏎…` marker.
+ */
+const commandHeaderRow = (value: string, width: number, truncate?: (text: string, width: number) => string): string => {
+  if (width <= 0) return "";
+  const [first = "", ...rest] = value.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  const single = rest.some((line) => line.trim() !== "") ? `${first} ⏎…` : first;
+  const row = truncate ? truncate(single, width) : toDisplayRows(single, width, wrapPlainText)[0] ?? "";
+  return row.includes("\n") ? toDisplayRows(row, width, wrapPlainText)[0] ?? "" : row;
+};
+
+/**
+ * OMP-style framed call card: the command alone in a frame, shown while the
+ * command runs (the result card replaces the display once it settles).
+ */
+export function bashCallCardComponent(args: { command?: string; timeout_seconds?: number; timeout?: number } | undefined, theme: any, truncate?: (text: string, width: number) => string): { render: (width: number) => string[]; invalidate: () => void } {
+  return {
+    render: (width: number) => {
+      if (width <= 0) return [""];
+      const inner = Math.max(1, width - 4);
+      const row = commandHeaderRow(formatBashCall(args, theme), inner, truncate);
+      return framedCard([{ rows: [row] }], width);
+    },
+    invalidate: () => {},
+  };
+}
+
+/**
+ * OMP-style framed result card: status header (icon, tool, command echo),
+ * a labeled "Output" section with the same tail-window collapse as
+ * bashResultComponent, and a dim stats line built from the tool's details.
+ * Failed calls arrive as thrown-error prose (no envelope); timeout and exit
+ * metadata come from details, which execute() always populates.
+ */
+export function bashResultCardComponent(result: any, options: any = {}, theme: any = {}, wrapToWidth: WrapToWidth = wrapPlainText): { render: (width: number) => string[]; invalidate: () => void } {
+  const raw = Array.isArray(result?.content) ? result.content.filter((part: any) => part?.type === "text").map((part: any) => part.text).join("\n") : "";
+  const failed = Boolean(result?.isError || options?.isError);
+  const partial = Boolean(options?.isPartial);
+  const details = result?.details ?? {};
+  const timedOut = Boolean(details.timed_out);
+  const durationMs = Number(details.duration_ms);
+  const timeoutSecs = Number(details.timeout_seconds);
+  const exitCode = details.exit_code;
+  const command = typeof details.command === "string" ? details.command : "";
+  const background = failed ? undefined : extractBackgroundDisplayText(raw, details);
+  const body = stripANSI(failed ? raw : background ?? extractBashDisplayText(raw)).trimEnd();
+  const dim = (text: string) => theme?.fg?.(failed ? "error" : "toolOutput", text) ?? text;
+  const muted = (text: string) => theme?.fg?.("muted", text) ?? text;
+  const headColor = (text: string) => theme?.fg?.(failed ? "error" : partial ? "muted" : "toolTitle", text) ?? text;
+  return {
+    render: (width: number) => {
+      if (width <= 0) return [""];
+      const inner = Math.max(1, width - 4);
+      // Header: "<icon> bash · $ <command>" bounded to the content width.
+      const icon = partial ? "·" : timedOut ? "⚠" : failed ? "✗" : "✓";
+      const headPrefix = `${icon} bash · `;
+      const commandRow = commandHeaderRow(`$ ${command || "..."}`, Math.max(1, inner - headPrefix.length), undefined);
+      const header = headColor(headPrefix) + muted(`$ ${commandRow.replace(/^\$ /, "")}`);
+      const outputRows = body ? toDisplayRows(body, inner, wrapToWidth) : [];
+      const collapsed = !options?.expanded && outputRows.length > BASH_PREVIEW_LINES;
+      const shown = collapsed ? outputRows.slice(-BASH_PREVIEW_LINES) : outputRows;
+      const output = shown.map(dim);
+      if (collapsed) output.unshift(...toDisplayRows(muted(`... (${outputRows.length - BASH_PREVIEW_LINES} earlier lines, ctrl+o to expand)`), inner, wrapToWidth));
+      if (!output.length && !partial) output.push(muted(failed ? "failed" : "(no output)"));
+      if (partial) output.push(muted("running · ctrl+b to background"));
+      else if (Number.isFinite(durationMs)) {
+        const stats = Number.isFinite(timeoutSecs) && (Number.isFinite(exitCode) || timedOut)
+          ? `[Wall: ${(durationMs / 1000).toFixed(1)}s | Timeout: ${timeoutSecs}s | Exit: ${timedOut ? "timeout" : exitCode}]`
+          : `[Wall: ${(durationMs / 1000).toFixed(1)}s]`;
+        output.push(muted(stats));
+      }
+      return framedCard([
+        { rows: [header] },
+        { label: "Output", rows: output },
+      ], width, { labelColor: muted });
     },
     invalidate: () => {},
   };

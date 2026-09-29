@@ -3,9 +3,8 @@ import {
   SWARM_BASH_PARAMETERS,
   buildResultXML,
   commandFailedMessage,
-  formatBashCall,
-  bashCallComponent,
-  bashResultComponent,
+  bashCallCardComponent,
+  bashResultCardComponent,
   runSwarmBash,
   timedOutMessage,
   normalizeBashParams,
@@ -43,11 +42,14 @@ export function registerSwarmBash(pi: Pi): void {
     name: "bash",
     label: "bash",
     description: SWARM_BASH_DESCRIPTION,
+    // The OMP-style framed cards draw their own frame, padding, and collapse,
+    // so they opt out of Pi's default padded Box shell entirely.
+    renderShell: "self",
     renderCall(args: BashParams, theme: any) {
-      return bashCallComponent(formatBashCall(args, theme), (text, width) => truncateToWidth(text, width, "…"));
+      return bashCallCardComponent(args, theme, (text, width) => truncateToWidth(text, width, "…"));
     },
     renderResult(result: any, options: any, theme: any) {
-      return bashResultComponent(result, options, theme, wrapTextWithAnsi);
+      return bashResultCardComponent(result, options, theme, wrapTextWithAnsi);
     },
     // A missing command runs `bash -c ""` rather than failing validation, so
     // this tool is listed in VALIDATES_OWN_ARGUMENTS and Pi must not
@@ -57,7 +59,7 @@ export function registerSwarmBash(pi: Pi): void {
       params = normalizeBashParams(params);
       const outcome = await runSwarmBash(params, { defaultCwd: ctx?.cwd ?? pi.getCwd?.() ?? process.cwd(), signal });
       if ("error" in outcome) return fail(outcome.error);
-      const details = { exit_code: outcome.exitCode, duration_ms: outcome.durationMs, timed_out: outcome.timedOut, command: params.command, ...(params.description ? { description: params.description } : {}) };
+      const details = { exit_code: outcome.exitCode, duration_ms: outcome.durationMs, timed_out: outcome.timedOut, timeout_seconds: outcome.effectiveSecs, command: params.command, ...(params.description ? { description: params.description } : {}) };
       if (outcome.timedOut) return fail(timedOutMessage(outcome.effectiveSecs, outcome.exitCode));
       if (outcome.exitCode !== 0) return fail(commandFailedMessage(outcome.exitCode, outcome.stdout, outcome.stderr, undefined, outcome.signal));
       return text(buildResultXML(outcome), details);

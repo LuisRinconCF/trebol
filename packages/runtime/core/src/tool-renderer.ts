@@ -46,6 +46,9 @@ function output(result: any, expanded: boolean): string {
 
 /** Adds only the missing renderer; tool-specific renderers remain authoritative. */
 export function withDefaultToolRenderer<T extends Record<string, any>>(tool: T): T {
+  // A "self" shell tool owns its entire row budget, including collapse; the
+  // generic collapsible would clip its frame to TOOL_PREVIEW_LINES.
+  if (tool.renderShell === "self") return tool;
   if (typeof tool.renderResult === "function") {
     return {
       ...tool,

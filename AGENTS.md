@@ -73,8 +73,6 @@ address in each tree.
 | `packages/context/` | `prompt` (canonical prompt assets and provenance), `skills` (loader, registry, builtins), `autogenskills` (generated-skill lifecycle). |
 | `packages/policy/` | `policy` (capability, workspace, mutation, network, approval). |
 | `packages/tools/` | `agents`, `taskmanage`, `mcp`, `schedule`, `codemode`. |
-| `tests/parity/` | Cross-runtime parity suite (`node --test`). |
-| `tools/parity/` | Pi ↔ Swarm probes, fixtures, generators; `plexus/` holds the A/B harness. |
 | `tools/experiments/bootstrap-agent/` | Opt-in bootstrap experiments; `planning-contract.mjs` provides experimental prompt variants and strict plan validation. Private history replays stay in ignored artifacts; planning scores do not prove execution or memory retrieval. |
 | `tools/integration/` | Postgres integration runner and cache dogfood. |
 | `tools/install/` | `doctor.mjs`: global-install health check (`npm run doctor`). |
@@ -85,7 +83,7 @@ address in each tree.
 | `docs/plans/{active,archive}/` | Plans still driving work; executed plans headed with what superseded them. |
 | `infra/` | `postgres/` compose stack, `bridges-go/` Go bridge. |
 | `vendor/` | Read-only references: `pi-mono`, `swarm-sdk`, and the `opencode` and `page-index` submodules. Never edited and never imported at runtime. |
-| `artifacts/` | Ignored. Probe outputs (`artifacts/parity/<run>/`), baselines, recordings. |
+| `artifacts/` | Ignored. Recordings and experiment outputs (e.g. `artifacts/tool-cards/`). |
 | `.swarm/`, `.pi/agent-sessions/` | Ignored runtime state; never a source of truth for implementation. |
 
 Naming rules: directories and Markdown files are `kebab-case`; the only
@@ -459,19 +457,17 @@ npm run build                     # tsc for every package, dependency order
 npm test                          # vitest: packages/**/test, .pi/test, tests/
 npx vitest run .pi/test/context   # one layer, or any path/file
 npm run build -w @pi-swarm/prompt # one package
-npm run test:parity               # Pi ↔ Swarm wire parity (node --test)
-npm run parity:probe              # capture into artifacts/parity/default
 npm run doctor                    # global-install health: PATH, dist, deps, models.json, theme
 node tools/repo/rewrite-imports.mjs --check   # every relative specifier resolves
-npm run dogfood                   # build + test + parity
+npm run dogfood                   # build + test
 ```
 
 ### Installing globally
 
 The repository is itself a Pi package (root `package.json` `pi` manifest:
 the six extension layers and `.pi/themes`). Never copy `.pi/extensions/`
-anywhere — the extensions import `.pi/lib`, `packages/*/src`, and
-`tools/parity/fixtures` by relative path and need the hoisted `node_modules`.
+anywhere — the extensions import `.pi/lib` and `packages/*/src` by relative
+path (tests import `tests/fixtures`) and need the hoisted `node_modules`.
 
 ```sh
 # dev box: link this checkout (no copy; dedupes against .pi/ by absolute path)
@@ -498,10 +494,8 @@ contracts here:
   form — a `git:` install has a different absolute path and would register
   every tool twice.
 
-Prove a change against the package path, not just the project boot:
-`node tools/parity/probe.mjs --profile project --workspace <foreign dir>
---package <checkout>` boots Pi with `settings.packages` pointing at the
-checkout and no `--extension` injection. Host-level items (node on the
+Prove a change against the package path, not just the project boot.
+Host-level items (node on the
 non-interactive `PATH`, `models.json` `maxTokens`, tmux launch shell,
 provider key scope) are outside the package; `npm run doctor` reports the
 first two.
