@@ -4,6 +4,8 @@ Release metadata is kept in `package.json`, `update-manifest.json`, and this fil
 
 ## [Unreleased]
 
+- Add `tools/repo/list-env-keys.py` to print environment variable names from a
+  JSON array without exposing values, with optional prefix filtering.
 - Accept canonical numeric task references in TaskManage: integer `taskId`,
   `parentTaskId`, `addBlocks`/`addBlockedBy` entries and `{ref}` targets are
   coerced to the decimal-string IDs returned by `op:list`/`op:create`, and
