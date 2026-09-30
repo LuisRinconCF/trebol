@@ -993,7 +993,8 @@ export function registerTaskManage(pi: { registerTool(tool: unknown): void; appe
         // An unparseable params object normalizes to undefined; the validation
         // message above is still the primary payload, so never crash the error
         // path while decorating it with per-operation details.
-        Object.assign(error, { details: { batch: { status: "failed", results: (normalizedParams as Params | undefined)?.operations?.map((operation, index) => {
+        const operations = (normalizedParams as Params | undefined)?.operations;
+        Object.assign(error, { details: { batch: { status: "failed", results: (Array.isArray(operations) ? operations : []).map((operation, index) => {
           const key = typeof operation?.key === "string" ? operation.key : String(index);
           const isOffender = offending === undefined ? index === 0 : key === offending;
           return { key, op: operation?.op, status: isOffender ? "failed" : "skipped", ...(isOffender ? { error: { code: "validation_failed", message: invalid, retryable: false } } : {}) };
