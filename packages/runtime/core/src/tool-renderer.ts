@@ -2,7 +2,7 @@ const MAX_DISPLAY_CHARS = 20_000;
 export const TOOL_PREVIEW_LINES = 5;
 
 /** Deliberately dependency-free: this helper is also used by headless tests and adapters. */
-class ToolOutputComponent {
+export class ToolOutputComponent {
   private readonly value: string;
   constructor(value: string) { this.value = value; }
   render(width: number): string[] {

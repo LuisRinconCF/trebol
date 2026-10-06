@@ -1,6 +1,9 @@
 /** Small, session-backed status line for the native Pi editor. */
+import { basename } from "node:path";
+import { visibleWidth, truncateToWidth } from "@earendil-works/pi-tui";
 import { formatRunningWorkDuration, onRunningWorkChange, runningWorkExpanded, runningWorkSelection, visibleRunningWork } from "../../lib/ui/running-work.ts";
 import { onAgentSettled } from "../../lib/runtime/agent-settled.ts";
+import { scheduleIdleStatus } from "../../lib/runtime/schedule-status.ts";
 export interface ConversationMetrics {
   version: 1;
   walltimeMs: number;
@@ -11,20 +14,6 @@ export interface ConversationMetrics {
 }
 
 const ENTRY = "pi-conversation-metrics";
-const CODEMODE_FOOTER_STATE = Symbol.for("pi-swarm-codemode-footer-state");
-
-function codeModeEnabled(): boolean {
-  const state = (globalThis as any)[CODEMODE_FOOTER_STATE];
-  return state?.enabled === true;
-}
-
-export function codeModeBadge(theme: any): string {
-  // Compact inline marker for the active mode; avoid a large background block.
-  const label = "CodeMode";
-  const colored = theme.fg?.("success", label) ?? label;
-  return theme.bold?.(colored) ?? colored;
-}
-
 const ROOT_KEY = Symbol.for("pi-swarm-conversation-metrics");
 /**
  * Pi exposes exactly one native footer slot (`ctx.ui.setFooter`). This extension
@@ -148,10 +137,9 @@ export function footerMetricsLine(walltime: string, outputTokens: number, segmen
 
 function styleIdentityLine(line: string, state: "running" | "idle", theme: any): string {
   const marker = state === "running" ? theme.fg("success", "●") : theme.fg("muted", "○");
-  const hasCodeMode = line.endsWith("  CODE");
-  const model = (hasCodeMode ? line.slice(0, -6) : line).replace(/^[●○]  /, "");
+  const model = line.replace(/^[●○]  /, "");
   const styledModel = model.startsWith("model ") ? theme.fg("muted", "model") + " " + theme.fg("accent", model.slice(6)) : theme.fg("muted", model);
-  return marker + "  " + styledModel + (hasCodeMode ? theme.fg("dim", "  ·  ") + codeModeBadge(theme) : "");
+  return marker + "  " + styledModel;
 }
 function styleMetricsLine(line: string, theme: any): string {
   return line.replace(/(\d+h \d+m|\d+m \d+s)/, (time) => theme.fg("dim", time)).replace(/(↓ [\d,]+ tok)/, (tokens) => theme.fg("dim", tokens));
@@ -190,7 +178,10 @@ function currentWalltime(now = Date.now()): number {
 }
 
 class MetricsFooter {
-  constructor(private readonly theme: any, private readonly onInvalidate: () => void) {}
+  private readonly unsubscribeBranch?: () => void;
+  constructor(private readonly theme: any, private readonly onInvalidate: () => void, private readonly footerData?: any) {
+    this.unsubscribeBranch = footerData?.onBranchChange?.(onInvalidate);
+  }
   render(width: number): string[] {
     try { return this.renderRows(Math.max(1, Math.floor(Number(width) || 80))); }
     catch (error) {
@@ -222,14 +213,50 @@ class MetricsFooter {
     }
     const work = visibleRunningWork();
     if (!runningWorkExpanded() || !work.length) {
-      const identity = footerIdentityLine(state, model) + (codeModeEnabled() ? "  CODE" : "");
-      // The Ctrl+B affordance belongs to the running bash row (the tool renders
-      // it inline while in flight), not to the global footer.
-      const metrics = footerMetricsLine(formatWalltime(currentWalltime()), m.outputTokens, segments);
-      return [
-        ...wrapFooterText(identity, width).map((row) => styleIdentityLine(row, state, this.theme)),
-        ...wrapFooterText(metrics, width).map((row) => styleMetricsLine(row, this.theme)),
-      ].map((row) => clampFooterRow(row, width));
+      const fg = (color: string, text: string) => this.theme.fg(color, text);
+      const clean = (text: unknown) => String(text ?? "").replace(/[\x00-\x1f\x7f-\x9f]/g, "");
+      const inner = Math.max(1, width - 2);
+      const fit = (text: string, cells = inner) => truncateToWidth(text, Math.max(1, cells));
+      const pair = (left: string, right: string): string[] => {
+        const room = inner - visibleWidth(right) - 3;
+        if (room >= Math.min(visibleWidth(left), 12)) {
+          const l = fit(left, room);
+          return [l + " ".repeat(Math.max(1, inner - visibleWidth(l) - visibleWidth(right))) + right];
+        }
+        return [fit(left), fit(right)];
+      };
+      const branch = clean(this.footerData?.getGitBranch?.());
+      const workspace = clean(basename(shared.ctx?.cwd ?? "")) || "workspace";
+      const location = this.theme.bold(fg("success", workspace)) + (branch ? fg("dim", " / " + branch) : "");
+      const current = shared.ctx?.model;
+      const identity = this.theme.bold(fg("accent", clean(current?.id) || "model unavailable"))
+        + (width >= 90 && current?.provider ? fg("dim", " · " + clean(current.provider)) : "");
+      const waiting = m.active ? undefined : scheduleIdleStatus(shared.ctx?.sessionManager?.getSessionId?.());
+      const status = fg(m.active ? "success" : waiting ? "accent" : "dim", m.active ? "WORKING" : waiting ?? "IDLE");
+      const rows = pair(location, identity + "   " + status);
+      const usage = shared.ctx?.getContextUsage?.();
+      const percent = typeof usage?.percent === "number" && Number.isFinite(usage.percent) ? usage.percent : undefined;
+      const pressure = percent !== undefined && percent >= 90 ? "error" : percent !== undefined && percent >= 70 ? "warning" : "accent";
+      const filled = percent === undefined ? 0 : Math.max(0, Math.min(8, Math.round(percent / 100 * 8)));
+      const gauge = width >= 70 && percent !== undefined
+        ? fg(pressure, "▰".repeat(filled)) + fg("dim", "▱".repeat(8 - filled)) + " " : "";
+      const context = fg("dim", "Context ") + gauge + fg(pressure, percent === undefined ? "—" : `${Math.round(percent)}%`);
+      const output = m.outputTokens >= 1000 ? `${(m.outputTokens / 1000).toFixed(1)}k` : String(m.outputTokens);
+      const metrics = fg("accent", `↓ ${output}`) + fg("dim", ` out  ·  ${formatWalltime(currentWalltime())} active`);
+      rows.push(...pair(context, metrics));
+      // Keep complete extension groups together instead of splitting labels by word.
+      let detail = "";
+      for (const segment of segments) {
+        const next = detail ? detail + "  ·  " + clean(segment) : clean(segment);
+        if (detail && visibleWidth(next) > inner) { rows.push(fg("dim", fit(detail))); detail = clean(segment); }
+        else detail = next;
+      }
+      if (detail) rows.push(fg("dim", fit(detail)));
+      return rows.map(row => {
+        const fitted = fit(row);
+        const padded = " " + fitted + " ".repeat(Math.max(0, width - 1 - visibleWidth(fitted)));
+        return truncateToWidth(padded, width);
+      });
     }
     const header = `Running work (${work.length})  Down select  Enter inspect  Esc close`;
     const rows = wrapFooterText(header, width).map((row) => this.theme.fg("accent", row));
@@ -247,14 +274,14 @@ class MetricsFooter {
     const metrics = footerMetricsLine(formatWalltime(currentWalltime()), m.outputTokens, segments);
     return [...rows, ...wrapFooterText(metrics, width).map((row) => styleMetricsLine(row, this.theme))].map((row) => clampFooterRow(row, width));
   }
-  dispose() {}
+  dispose() { this.unsubscribeBranch?.(); }
   invalidate() { this.onInvalidate(); }
 }
 
 function render(ctx?: any) {
   // Keep this a single native footer line; unlike a widget it cannot push or
   // scroll the user's input box and never becomes transcript content.
-  if (!shared.footer) ctx?.ui?.setFooter?.((tui: any, theme: any) => (shared.footer = new MetricsFooter(theme, () => tui?.requestRender?.())));
+  if (!shared.footer) ctx?.ui?.setFooter?.((tui: any, theme: any, footerData: any) => (shared.footer = new MetricsFooter(theme, () => tui?.requestRender?.(), footerData)));
   ctx?.ui?.requestRender?.();
 }
 
