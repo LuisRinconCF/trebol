@@ -126,6 +126,12 @@ export class TaskEnforcementHook {
   private userHasPlan = false;
   private lastUserMessage = "";
   constructor(private readonly mode: EnforcementMode = "advise") {}
+  /** Pure name-only preview. Bash needs complete command classification, so defer it. */
+  previewBlock(toolName: string, tasks: readonly HookTask[], isSubAgent = false): string | undefined {
+    if (this.mode !== "block" || isSubAgent || !toolName || normalizeToolName(toolName) === "bootstrap") return;
+    if (isTaskManagementTool(toolName) || isPlanModeTool(toolName) || isSkillTool(toolName) || isUserInteractionTool(toolName) || isCodeModeTool(toolName) || isReadOnlyExplorationTool(toolName) || isBashTool(toolName)) return;
+    if (!hasFocusedTask(tasks)) return "Task enforcement requires a focused in-progress task. Correct this step using TaskManage with task-specific questions; do not execute the rejected action.";
+  }
   /** EventMessageAfterReceive with role user. */
   onUserMessage(content: string): void {
     if (content === "") return;

@@ -1116,6 +1116,13 @@ export class AutoSkillManager {
     }
     return;
   }
+  /** Pure preview: no counters, recovery flags, disk writes or hook execution. */
+  previewToolBlock(toolName: string): string | undefined {
+    if (this.config.mode !== "auto" || this.config.accountingExempt || !this.state.focusedTask || this.isExempt(toolName, {})) return;
+    const budget = this.state.skilled ? this.config.workingBudget : this.config.toolCallBudget;
+    if (this.state.reviewRequired || this.state.budgetCalls >= budget)
+      return "Skill budget/review gate requires a successful relevant Skill invocation. Choose Skill for this step; library management alone does not refill the budget.";
+  }
   recordSkillInvocation(name: string, version: string) {
     return this.withSkillLocks([name, "curator-state"], () => {
       this.mergeCuratorState();

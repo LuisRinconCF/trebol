@@ -1,4 +1,5 @@
 import { addHookObservation } from "./hook-observations.ts";
+import { installHookCorrection, correctionBlock } from "./hook-correction.ts";
 
 export type HookGroup = "taskmanage" | "autogenskills" | "swarm-prompt" | "disk-hooks" | "annoyance" | "structure-guard";
 export type HookOutcome = "executed" | "blocked" | "failed" | "skipped";
@@ -79,6 +80,7 @@ export function recordHook(group: HookGroup, event: string, payload?: any, outco
 (globalThis as any).__piSwarmRegisterHook = registerHook;
 
 export function registerHook(pi: any, group: HookGroup, event: string, handler: any) {
+  installHookCorrection(pi);
   normalizeState();
   shared.state.counts.registered++;
   const callback = async (payload: any, ctx: any) => {
@@ -99,7 +101,9 @@ export function registerHook(pi: any, group: HookGroup, event: string, handler: 
       // `message` as model-visible context, which produced prose such as
       // "hook completed successfully" after every successful hook. Only
       // return actual middleware data (prompt changes) or a hard block.
-      if (result?.block === true) return { block: true, reason: result.reason };
+      if (result?.block === true) return event === "tool_call"
+        ? correctionBlock(pi, payload, ctx, result.reason ?? result.message)
+        : { block: true, reason: result.reason };
       // Pi's native event contracts are the boundary: only return a valid
       // middleware patch for the event that requested it. In particular, a
       // hook's diagnostic `message` is never returned from tool_call, where it

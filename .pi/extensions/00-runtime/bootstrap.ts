@@ -1,4 +1,5 @@
 import { redactKnowledge } from "../../lib/state/knowledge-store.ts";
+import { correctionBlock, registerCorrectionPreview } from "../../lib/runtime/hook-correction.ts";
 import { bootstrapBrief, formatBootstrapBrief } from "../../lib/context/bootstrap-brief.ts";
 import { executionLog } from "../../lib/context/execution-log.ts";
 import { recallKnowledge } from "../../lib/context/knowledge-recall.ts";
@@ -26,9 +27,9 @@ function bootstrapRequirementState(): BootstrapRequirementState {
 }
 
 /** Effective session state for bootstrap guidance and enforcement. It defaults
- * on for every session; Ctrl+D changes only this in-memory session override. */
+ * off for every session; Ctrl+D changes only this in-memory session override. */
 export function bootstrapRequirementEnabled(): boolean {
-  return bootstrapRequirementState().enabled !== false;
+  return bootstrapRequirementState().enabled === true;
 }
 
 function installBootstrapRequirementFooter(ctx: any): void {
@@ -74,10 +75,15 @@ export default function bootstrapExtension(pi: any) {
     }
     ctx.ui.notify(`Memory enforcement: ${readBootstrapSettings(ctx.cwd).enforce ? "on" : "off"}; bootstrap: ${ready ? "ready" : "pending"}`, "info");
   } });
-  pi.on("tool_call", (event: any, ctx: any) => memoryGate(bootstrapRequirementEnabled() && readBootstrapSettings(ctx.cwd).enforce === true, ready, event.toolName));
+  const previewBootstrap = (name: string, ctx: any) => memoryGate(bootstrapRequirementEnabled() && readBootstrapSettings(ctx.cwd).enforce === true, ready, name)?.reason;
+  registerCorrectionPreview(pi, "bootstrap", previewBootstrap);
+  pi.on("tool_call", (event: any, ctx: any) => {
+    const reason = previewBootstrap(event.toolName, ctx);
+    return reason ? correctionBlock(pi, event, ctx, reason) : undefined;
+  });
   let removeSettings: (() => void) | undefined;
   pi.on("session_start", (_event: any, ctx: any) => {
-    bootstrapRequirementState().enabled = true;
+    bootstrapRequirementState().enabled = false;
     installBootstrapRequirementFooter(ctx);
     removeTerminalInput?.();
     removeTerminalInput = ctx.ui?.onTerminalInput?.((data: string) => {
