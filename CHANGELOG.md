@@ -13,6 +13,8 @@ Release metadata is kept in `package.json`, `update-manifest.json`, and this fil
 - Compact sessions at a fixed token threshold with mandatory compaction instead of waiting for pressure.
 - Add a runtime switch (`/trebol-toggle`, Ctrl+N) for the Trebol extension pack with shape-checked reload and no per-press config writes.
 - Reconcile TaskManage #38 review evidence and guard validation error decoration.
+- Add `tools/repo/list-env-keys.py` to print environment variable names from a
+  JSON array without exposing values, with optional prefix filtering.
 
 - Accept canonical numeric task references in TaskManage: integer `taskId`,
   `parentTaskId`, `addBlocks`/`addBlockedBy` entries and `{ref}` targets are
