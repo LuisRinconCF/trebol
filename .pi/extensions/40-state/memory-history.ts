@@ -7,6 +7,7 @@ import { promoteGlobalKnowledge } from "../../lib/state/knowledge-promotion.ts";
 import { withDefaultToolRenderer } from "../../../packages/runtime/core/src/tool-renderer.ts";
 import { selectTaskMemory } from "../../lib/context/memory-agent.ts";
 import { handoffMemory } from "../../lib/context/memory-handoff.ts";
+import { memoryLookupText, renderMemoryHistoryCall, renderMemoryHistoryResult } from "../../lib/state/memory-history-presentation.ts";
 
 export const MEMORY_ENTRY_TYPE = "pi-swarm-memory";
 export const MEMORY_VERSION = 1;
@@ -132,7 +133,7 @@ export class MemoryHistory {
   }
 }
 
-const schema = { type: "object", required: ["operation"], additionalProperties: false, properties: { operation: { type: "string", enum: ["remember", "offer", "search", "recall", "replay", "migrate", "correct", "delete", "get"] }, text: { type: "string" }, note: { type: "string" }, query: { type: "string" }, tags: { type: "array", items: { type: "string" } }, evidence: { type: "array", items: { type: "object", required: ["ref"], additionalProperties: false, properties: { ref: { type: "string" }, quote: { type: "string" } } } }, status: { type: "string", enum: ["candidate", "verified"] }, kind: { type: "string", enum: ["fact", "decision", "process", "context"] }, source: { type: "string" }, id: { type: "string" }, expectedRevision: { type: "string" }, namespace: { type: "string" }, limit: { type: "number" }, mode: { type: "string", enum: ["topical", "task"] } } } as const;
+const schema = { type: "object", required: ["operation"], additionalProperties: false, properties: { operation: { type: "string", enum: ["remember", "offer", "search", "recall", "ask", "replay", "migrate", "correct", "delete", "get"] }, text: { type: "string" }, note: { type: "string" }, query: { type: "string" }, tags: { type: "array", items: { type: "string" } }, evidence: { type: "array", items: { type: "object", required: ["ref"], additionalProperties: false, properties: { ref: { type: "string" }, quote: { type: "string" } } } }, status: { type: "string", enum: ["candidate", "verified"] }, kind: { type: "string", enum: ["fact", "decision", "process", "context"] }, source: { type: "string" }, id: { type: "string" }, expectedRevision: { type: "string" }, namespace: { type: "string" }, limit: { type: "number" }, mode: { type: "string", enum: ["topical", "task"] } } } as const;
 
 export default function memoryHistoryExtension(pi: any): void {
   const history = new MemoryHistory();
@@ -170,9 +171,9 @@ export default function memoryHistoryExtension(pi: any): void {
       } catch (error) { if (ownGeneration === generation) ctx.ui?.notify?.(error instanceof Error ? error.message : "Promotion failed", "warning"); }
     },
   });
-  pi.registerTool?.(withDefaultToolRenderer({ name: "memory_history", label: "Memory History", description: `Recall and enrich durable redacted memory. To pass an explicit 'remember that' request to the memory reviewer, use operation=offer with text, source and cited evidence in repository/worktree scope; it stores only a candidate and acknowledges indexing. For task-aware read-only lookup, use operation=recall. ${MEMORY_KNOWLEDGE_GUIDANCE} ${MEMORY_SCOPE_GUIDANCE} Search before saving to avoid duplicates. Include evidence references; exclude secrets and raw transcripts. Defaults to repository scope. Search scope all includes repository/worktree/global. Use search with status candidate to find pending knowledge, then get by id to inspect its full evidence. Review source evidence and later corrections before using correct to mark a candidate verified; leave unsupported claims pending. Writes default to candidate; verified records require evidence references (verification is an attributed claim, not automatic proof). correct/delete require id and expectedRevision. Agent tool calls cannot write global memory. Ask the user to review an existing verified record with /memory-promote repository|worktree ID [namespace]; global reads remain available.`, parameters: { ...schema, properties: { ...schema.properties, scope: { type: "string", enum: ["repository", "worktree", "global", "session", "all"] } } }, async execute(_id: string, params: any, signal?: AbortSignal) {
+  pi.registerTool?.(withDefaultToolRenderer({ name: "memory_history", label: "Memory History", description: `Recall and enrich durable redacted memory. Use operation=ask with a natural-language query to have a read-only memory agent answer using cited scoped records; no evidence yields no answer. Use operation=recall to retrieve source cards without an answer. To pass an explicit 'remember that' request to the memory reviewer, use operation=offer with text, source and cited evidence in repository/worktree scope; it stores only a candidate and acknowledges indexing. ${MEMORY_KNOWLEDGE_GUIDANCE} ${MEMORY_SCOPE_GUIDANCE} Search before saving to avoid duplicates. Include evidence references; exclude secrets and raw transcripts. Defaults to repository scope. Search scope all includes repository/worktree/global. Use search with status candidate to find pending knowledge, then get by id to inspect its full evidence. Review source evidence and later corrections before using correct to mark a candidate verified; leave unsupported claims pending. Writes default to candidate; verified records require evidence references (verification is an attributed claim, not automatic proof). correct/delete require id and expectedRevision. Agent tool calls cannot write global memory. Ask the user to review an existing verified record with /memory-promote repository|worktree ID [namespace]; global reads remain available.`, parameters: { ...schema, properties: { ...schema.properties, scope: { type: "string", enum: ["repository", "worktree", "global", "session", "all"] } } }, renderShell: "self", renderCall: renderMemoryHistoryCall, renderResult: renderMemoryHistoryResult, async execute(_id: string, params: any, signal?: AbortSignal) {
     try {
-      if (!["remember", "offer", "search", "recall", "replay", "migrate", "correct", "delete", "get"].includes(params.operation)) throw new Error("Unknown memory operation");
+      if (!["remember", "offer", "search", "recall", "ask", "replay", "migrate", "correct", "delete", "get"].includes(params.operation)) throw new Error("Unknown memory operation");
       const selectedScope = params.scope ?? "repository";
       if (!["repository", "worktree", "global", "session", "all"].includes(selectedScope)) throw new Error("Invalid memory scope");
       if (params.operation === "offer") {
@@ -183,7 +184,7 @@ export default function memoryHistoryExtension(pi: any): void {
           signal, generation, currentGeneration: () => generation });
         return { content: [{ type: "text", text: JSON.stringify(answer) }], details: answer };
       }
-      if (params.operation === "recall") {
+      if (params.operation === "recall" || params.operation === "ask") {
         if (selectedScope === "session") throw new Error("Recall requires repository, worktree, global, or all scope");
         if (params.limit !== undefined && (!Number.isInteger(params.limit) || params.limit < 1 || params.limit > 12)) throw new Error("recall limit must be 1–12");
         const manager = (globalThis as any)[Symbol.for("pi-swarm-task-manager")];
@@ -193,8 +194,8 @@ export default function memoryHistoryExtension(pi: any): void {
         const scopes = selectedScope === "all" ? ["repository", "worktree", "global"] : [selectedScope];
         const answer = await selectTaskMemory({ pi, cwd, query: String(params.query ?? ""), task, model, mode: params.mode ?? "topical",
           namespace: params.namespace ?? "default", scopes: scopes as any, status: params.status,
-          limit: params.limit, signal, generation, currentGeneration: () => generation });
-        return { content: [{ type: "text", text: JSON.stringify(answer) }], details: answer };
+          limit: params.limit, answerRequired: params.operation === "ask", signal, generation, currentGeneration: () => generation });
+        return { content: [{ type: "text", text: memoryLookupText(params.operation, answer) }], details: answer };
       }
       if (selectedScope === "session" && ["correct", "delete", "get"].includes(params.operation)) throw new Error("Legacy session memory does not support correction/deletion; use scoped knowledge records");
       if (params.operation === "correct" && (!params.id || !params.expectedRevision)) throw new Error("correct requires id and expectedRevision");
@@ -212,7 +213,14 @@ export default function memoryHistoryExtension(pi: any): void {
         }
         const storeRecords = scopes.flatMap((storeScope) => openKnowledgeStore({ cwd, scope: storeScope, root: sharedMemoryRoot(), namespace }).snapshot().filter(record => !record.deleted));
         const query = String(params.operation === "replay" ? "" : params.query ?? "").trim().toLocaleLowerCase();
-        const knowledge = storeRecords.filter(record => (!params.status || record.status === params.status) && (!query || `${record.text} ${record.tags.join(" ")}`.toLocaleLowerCase().includes(query)));
+        const terms = [...new Set(query.match(/[\p{L}\p{N}_.-]{3,}/gu) ?? [])];
+        const knowledge = storeRecords.filter(record => {
+          if (params.status && record.status !== params.status) return false;
+          if (!query) return true;
+          const haystack = `${record.text} ${record.tags.join(" ")}`.toLocaleLowerCase();
+          const recordTerms = new Set(haystack.match(/[\p{L}\p{N}_.-]+/gu) ?? []);
+          return haystack.includes(query) || (terms.length >= 2 && terms.every(term => recordTerms.has(term)));
+        });
         if (["remember", "correct"].includes(params.operation)) {
           const store = openKnowledgeStore({ cwd, scope: selectedScope, root: sharedMemoryRoot(), namespace });
           if (params.operation === "correct" && !store.read(params.id)) throw new Error("Cannot correct an unknown knowledge record");
