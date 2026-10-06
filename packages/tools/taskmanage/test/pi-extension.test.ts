@@ -79,7 +79,9 @@ describe("root Pi TaskManage extension", () => {
     // Fields the validators refuse must not be advertised on that op.
     expect(branch("update").properties.owner_id).toBeUndefined();
     expect(branch("list").properties.include_audit).toBeUndefined();
-    expect(runtime.handlers.get("session_start")).toHaveLength(3); // state, cleanup budget, audit
+    // state, cleanup budget, audit + hook-correction coordinator + task-enforcement
+    // preview registration (both install a session_start handler via registerHook).
+    expect(runtime.handlers.get("session_start")).toHaveLength(5);
     // Swarm builtin pipeline (first) + task-audit coordinator (second).
     expect(runtime.handlers.get("tool_call")).toHaveLength(2);
     expect(runtime.handlers.get("tool_result")).toHaveLength(2);
