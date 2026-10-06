@@ -51,7 +51,7 @@ Run `/auto on`, then send a task. `/auto status` checks the mode and `/auto off`
 - Task creation, planning, blocking, notes, status, and run control
 - Schedules, goals, loops, and wakeups
 - MCP and vault adapters
-- CodeMode for confined, composable tool workflows
+- Pi's native CodeMode for composable tool workflows. Requires Pi 0.99.0 or newer; this project enables it with `defaultTools: ["+codemode"]` in `.pi/settings.json`.
 - User questions and structured annoyance/defect reporting
 
 ### State and memory
@@ -125,7 +125,7 @@ state; it must not become the source of truth for that state.
 | `packages/runtime/` | Core identity, contracts, runtime control, and bootstrap |
 | `packages/context/` | Prompt assets, skills, and generated-skill lifecycle |
 | `packages/policy/` | Capability and execution policy |
-| `packages/tools/` | Agents, CodeMode, MCP, scheduling, and task management |
+| `packages/tools/` | Agents, MCP, scheduling, and task management |
 | `docs/` | Architecture, plans, references, and parity documentation |
 | `artifacts/` | Ignored probe output, recordings, and baselines |
 | `vendor/` | Read-only upstream source and reference submodules |
@@ -208,6 +208,14 @@ edits, tasks, and memory retrieval, describe the work to the agent so it can
 invoke the corresponding tools. Some panels require interactive `pi` rather
 than headless `pi -p`.
 
+Press `Ctrl+N` while the agent is idle to toggle this project's extension pack
+off/on. The resident loader shows `Trebol OFF [Ctrl+N]` in the native status area while
+off; toggling reconstructs the runtime without changing configuration. The key
+invokes reload directly, without injecting a slash command or model message.
+The native editor draft is preserved. `/trebol-toggle` remains available manually.
+The shortcut adapter is verified on Pi 0.99.2; rerun
+`python3 tools/e2e/trebol-toggle-tmux.py` after Pi upgrades.
+
 ### First task and memory
 
 1. Describe your task normally, e.g. “Inspect the auth flow and plan a safe fix.”
@@ -274,7 +282,6 @@ flowchart TD
 | Command | What to expect / important limit |
 | --- | --- |
 | `/btw Why did this test fail?` | Read-only side question using the current session as background. TUI and an active model are required; Escape aborts an active question or closes the overlay. |
-| `/codemode` or `/codemode status|on|off|list` | Pick available tools, inspect mode or toggle CodeMode. `on` hides native tools while the bounded `codemode` tool remains available; `off` restores them. |
 | `/supervisor status` or `/supervisor` | Inspect configuration/status (JSON in non-interactive mode) or open the TUI settings for optional Jev audit, operational review and memory worker. Workers need configured credentials/adapters; unavailable actions report an error rather than claiming completion. |
 | `/vault list`, `/vault add [id]`, `/vault remove <id>` | List IDs/kinds, enter a global secret through UI prompts, or remove an entry. Add needs an interactive input UI; never paste credentials into chat or commit them. |
 | `/hooks` or `/hooks GROUP on|off` | Inspect or change a known hook group; an unknown group reports an error. |

@@ -44,9 +44,8 @@ export function configuredExtraTools(env: NodeJS.ProcessEnv = process.env): Set<
 /** The set of tool names Swarm would register in this environment. */
 export function swarmSurfaceFor(environment: GatingEnvironment): Set<string> {
   const names = new Set<string>(swarmToolNames());
-  // CodeMode is the Pi orchestration entrypoint. It is intentionally kept on
-  // the model surface even though it is a Pi-specific composition tool; its
-  // nested calls are dispatched through the normal hook/policy bridge.
+  // Pi's native CodeMode tool is a built-in surface, not a Swarm-owned tool;
+  // keep it visible to the model when enabled by Pi settings.
   names.add("codemode");
   names.add("bootstrap");
   // Durable memory is a Pi-Swarm state extension, not part of the upstream

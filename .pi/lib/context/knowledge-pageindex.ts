@@ -33,6 +33,7 @@ function rankedSections(index: ContextIndex, scope: { namespace: string; workspa
   if (!terms.length) return [];
   const exactIdentifier = identifierQuery(query);
   const matches: Array<{ sourceId: string; nodeId: string; score: number; hits: number }> = [];
+  const broad: typeof matches = [];
   const walk = (sourceId: string, nodes: ReturnType<ContextIndex["inspect"]>[number]["tree"]) => {
     for (const node of nodes) {
       const haystack = `${node.title}\n${node.text}`.toLocaleLowerCase();
@@ -42,16 +43,20 @@ function rankedSections(index: ContextIndex, scope: { namespace: string; workspa
       const answerless = /\bAnswer: unanswered\b/i.test(node.text);
       // One distinctive term is enough for an exact identifier query. A broad
       // question needs at least two independently present concepts.
-      if (!node.children.length && !answerless && hits.length >= Math.min(2, terms.length) && hits.length / terms.length >= (exactIdentifier ? 0.3 : 0.6)) {
+      if (!node.children.length && !answerless && hits.length >= Math.min(2, terms.length)) {
         const title = node.title.toLocaleLowerCase();
-        matches.push({ sourceId, nodeId: node.nodeId, hits: hits.length,
-          score: hits.reduce((score, term) => score + (title.includes(term) ? 2 : 1) + (term.length >= 12 ? 2 : 0), 0) / terms.length });
+        const match = { sourceId, nodeId: node.nodeId, hits: hits.length,
+          score: hits.reduce((score, term) => score + (title.includes(term) ? 2 : 1) + (term.length >= 12 ? 2 : 0), 0) / terms.length };
+        (hits.length / terms.length >= (exactIdentifier ? 0.3 : 0.6) ? matches : broad).push(match);
       }
       walk(sourceId, node.children);
     }
   };
   for (const source of index.inspect(scope)) walk(source.id, source.tree);
-  return matches.sort((a, b) => b.score - a.score || b.hits - a.hits).slice(0, limit);
+  const rank = (a: typeof matches[number], b: typeof matches[number]) => b.score - a.score || b.hits - a.hits;
+  // Preserve precise hits first; fill otherwise unused card slots with partial
+  // two-concept matches so verbose natural-language questions can be reviewed.
+  return [...matches.sort(rank), ...broad.sort(rank)].slice(0, limit);
 }
 
 /** Render task Q&A as natural sections instead of indexing its JSON blob.

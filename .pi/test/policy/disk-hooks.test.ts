@@ -29,9 +29,11 @@ describe("disk hook Pi adapter", () => {
       toolCallId: "blocked-call",
       input: { command: "echo no" },
     }, {});
+    // Blocks gain same-step correction guidance (see hook-correction); the
+    // original hook reason must remain the leading text.
     expect(decision).toMatchObject({
       block: true,
-      reason: "disk hook blocked (exit 2)",
+      reason: expect.stringContaining("disk hook blocked (exit 2)"),
     });
     await expect(handlers.get("tool_call")![0]({
       toolName: "read",
@@ -58,7 +60,9 @@ describe("disk hook Pi adapter", () => {
       registerCommand() {},
     }, { cwd, home });
 
-    await handlers.get("session_start")![0]({}, {});
+    // The hook-correction coordinator registers its own session_start handler
+    // first, so dispatch every registered handler the way Pi does.
+    for (const start of handlers.get("session_start") ?? []) await start({}, {});
     expect(existsSync(join(cwd, "lifecycle-ran"))).toBe(true);
     expect(handlers.has("session_shutdown")).toBe(true);
     expect(handlers.has("before_agent_start")).toBe(true);

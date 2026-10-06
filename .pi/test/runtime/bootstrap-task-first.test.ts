@@ -36,6 +36,12 @@ it("toggles only the bootstrap requirement with Ctrl+D and reports it in the foo
   const footer=()=>(globalThis as any)[Symbol.for("pi-swarm-footer-segments")].get("bootstrap-requirement")();
   const before=handlers.get("before_agent_start")![0],gate=handlers.get("tool_call")![0];
   expect(registerShortcut).not.toHaveBeenCalled();
+  // The requirement now defaults OFF for every session; the persisted enforce
+  // flag only decides what Ctrl+D turns on. Toggle it on for this session:
+  expect(footer()).toBe("bootstrap:off");
+  expect(gate({toolName:"Bash"},ctx)).toBeUndefined();
+  expect(before({systemPrompt:"base"},ctx)).toBeUndefined();
+  expect(terminalListeners[0]("\x04")).toEqual({consume:true});
   expect(footer()).toBe("bootstrap:on");
   expect(gate({toolName:"Bash"},ctx)?.block).toBe(true);
   expect(before({systemPrompt:"base"},ctx)?.systemPrompt).toContain("Memory enforcement is ON");
@@ -48,7 +54,13 @@ it("toggles only the bootstrap requirement with Ctrl+D and reports it in the foo
   expect(terminalListeners).toHaveLength(2);
   const activeInput=terminalListeners[1];
 
+  // A re-entered session also resets the requirement to its off default.
+  expect(footer()).toBe("bootstrap:off");
   expect(activeInput("x")).toBeUndefined();
+  expect(activeInput("\x04")).toEqual({consume:true});
+  expect(footer()).toBe("bootstrap:on");
+  expect(gate({toolName:"Bash"},ctx)?.block).toBe(true);
+  expect(gate({toolName:"TaskManage"},ctx)).toBeUndefined();
   expect(activeInput("\x04")).toEqual({consume:true});
   expect(footer()).toBe("bootstrap:off");
   expect(gate({toolName:"Bash"},ctx)).toBeUndefined();
@@ -61,8 +73,8 @@ it("toggles only the bootstrap requirement with Ctrl+D and reports it in the foo
   expect(footer()).toBe("bootstrap:on");
   expect(gate({toolName:"Bash"},ctx)?.block).toBe(true);
   expect(gate({toolName:"TaskManage"},ctx)).toBeUndefined();
-  expect(requestRender).toHaveBeenCalledTimes(4);
-  expect(notify.mock.calls.map(call=>call[0])).toEqual(["Bootstrap requirement off","Bootstrap requirement on"]);
+  expect(requestRender).toHaveBeenCalledTimes(6);
+  expect(notify.mock.calls.map(call=>call[0])).toEqual(["Bootstrap requirement on","Bootstrap requirement on","Bootstrap requirement off","Bootstrap requirement on"]);
   for(const shutdown of handlers.get("session_shutdown")??[])await shutdown({},ctx);
   expect(removers[1]).toHaveBeenCalledTimes(1);
  }finally{

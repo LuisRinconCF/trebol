@@ -1,4 +1,6 @@
 import { registerSupervisorBudget } from "../../lib/context/supervisor-live-state.ts";
+import { registerCorrectionPreview } from "../../lib/runtime/hook-correction.ts";
+import { isHookEnabled } from "../../lib/runtime/hook-state.ts";
 import { registerAutoSkills, type Config } from "../../../packages/context/autogenskills/src/index.ts";
 import { AUTOGEN_BUDGET_SOURCE } from "../../lib/runtime/swarm-builtin-hooks.ts";
 import { fileURLToPath } from "node:url";
@@ -92,6 +94,8 @@ export function registerAutoSkillsExtension(pi: any, options: AutoSkillsExtensio
     },
   });
   (globalThis as any)[AUTOGEN_BUDGET_SOURCE] = manager;
+  registerCorrectionPreview(pi, "autogenskills", (name, ctx) =>
+    isHookEnabled("autogenskills") && !ctx?.isSubAgent && process.env.PI_SWARM_SUBAGENT !== "1" ? manager.previewToolBlock(name) : undefined);
   pi.on("session_start", (_event:unknown,ctx:any)=>registerSupervisorBudget(ctx,()=>manager.budgetStatus()));
   pi.on("session_switch", (_event:unknown,ctx:any)=>registerSupervisorBudget(ctx,()=>manager.budgetStatus()));
   return manager;

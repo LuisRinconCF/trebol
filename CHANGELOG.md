@@ -4,8 +4,18 @@ Release metadata is kept in `package.json`, `update-manifest.json`, and this fil
 
 ## [Unreleased]
 
+- Add an open issue triage script under `tools/experiments` for batching repository issue review.
+- Accept live tool results as TaskManage evidence, so in-session tool output can back completion answers.
+- Rely on Pi's native CodeMode tool instead of the custom codemode registration.
+- Improve the conversation footer: workspace/branch and model/state reporting plus schedule status countdowns.
+- Add cited answers to scoped memory lookup: `memory_history ask`/`recall` return validated source cards alongside bounded answers.
+- Correct blocked tool choices within the same session through the shared hook correction coordinator, with escalation after repeated attempts.
+- Compact sessions at a fixed token threshold with mandatory compaction instead of waiting for pressure.
+- Add a runtime switch (`/trebol-toggle`, Ctrl+N) for the Trebol extension pack with shape-checked reload and no per-press config writes.
+- Reconcile TaskManage #38 review evidence and guard validation error decoration.
 - Add `tools/repo/list-env-keys.py` to print environment variable names from a
   JSON array without exposing values, with optional prefix filtering.
+
 - Accept canonical numeric task references in TaskManage: integer `taskId`,
   `parentTaskId`, `addBlocks`/`addBlockedBy` entries and `{ref}` targets are
   coerced to the decimal-string IDs returned by `op:list`/`op:create`, and

@@ -2,25 +2,24 @@
   "name": "@pi-swarm/ext-tools",
   "private": true,
   "type": "module",
-  "description": "Pi-Swarm extension layer 30-tools: every registerTool surface: bash, fs, search, agents, tasks, schedule, history, vault, research, ask-user, annoyed, codemode. Load order within the layer is this list; layers load in numeric prefix order.",
+  "description": "Pi-Swarm extension layer 30-tools: every registerTool surface: bash, fs, search, agents, tasks, schedule, history, vault, research, ask-user, annoyed. Load order within the layer is this list; layers load in numeric prefix order.",
   "pi": {
     "extensions": [
-      "annoyed/index.ts",
-      "codemode.ts",
-      "control-task-tools.ts",
-      "history-search.ts",
-      "ask-user/index.ts",
-      "research-tools.ts",
-      "swarm-monitor.ts",
-      "swarm-websearch.ts",
-      "swarm-goal.ts",
-      "swarm-agent-tools.ts",
-      "swarm-background-bash.ts",
-      "swarm-bash.ts",
-      "swarm-fs-tools.ts",
-      "swarm-history-vault-tools.ts",
-      "taskmanage.ts",
-      "vault.ts"
+      ".trebol-guards/00-annoyed__index.ts",
+      ".trebol-guards/01-control-task-tools.ts",
+      ".trebol-guards/02-history-search.ts",
+      ".trebol-guards/03-ask-user__index.ts",
+      ".trebol-guards/04-research-tools.ts",
+      ".trebol-guards/05-swarm-monitor.ts",
+      ".trebol-guards/06-swarm-websearch.ts",
+      ".trebol-guards/07-swarm-goal.ts",
+      ".trebol-guards/08-swarm-agent-tools.ts",
+      ".trebol-guards/09-swarm-background-bash.ts",
+      ".trebol-guards/10-swarm-bash.ts",
+      ".trebol-guards/11-swarm-fs-tools.ts",
+      ".trebol-guards/12-swarm-history-vault-tools.ts",
+      ".trebol-guards/13-taskmanage.ts",
+      ".trebol-guards/14-vault.ts"
     ]
   }
 }

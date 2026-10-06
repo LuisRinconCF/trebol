@@ -8,6 +8,7 @@
   ],
   "pi": {
     "extensions": [
+      ".pi/extensions/trebol-loader.ts",
       ".pi/extensions/00-runtime",
       ".pi/extensions/10-context",
       ".pi/extensions/20-policy",
@@ -22,7 +23,7 @@
   "scripts": {
     "prepare": "npm run build:runtime",
     "build:runtime": "npm run build -w @pi-swarm/runtime-contracts && npm run build -w @pi-swarm/core && npm run build -w @pi-swarm/bootstrap",
-    "build": "npm run build -w @pi-swarm/contract && npm run build -w @pi-swarm/core && npm run build -w @pi-swarm/runtime-contracts && npm run build -w @pi-swarm/bootstrap && npm run build -w @pi-swarm/prompt && npm run build -w @pi-swarm/skills && npm run build -w @pi-swarm/autogenskills && npm run build -w @pi-swarm/policy && npm run build -w @pi-swarm/schedule && npm run build -w @pi-swarm/agents && npm run build -w @pi-swarm/mcp && npm run build -w @pi-swarm/codemode && npm run build -w @pi-swarm/taskmanage",
+    "build": "npm run build -w @pi-swarm/contract && npm run build -w @pi-swarm/core && npm run build -w @pi-swarm/runtime-contracts && npm run build -w @pi-swarm/bootstrap && npm run build -w @pi-swarm/prompt && npm run build -w @pi-swarm/skills && npm run build -w @pi-swarm/autogenskills && npm run build -w @pi-swarm/policy && npm run build -w @pi-swarm/schedule && npm run build -w @pi-swarm/agents && npm run build -w @pi-swarm/mcp && npm run build -w @pi-swarm/taskmanage",
     "test": "vitest run",
     "test:integration": "node ./tools/integration/run-postgres-integration.mjs",
     "doctor": "node tools/install/doctor.mjs",
@@ -38,7 +39,9 @@
     "typescript": "^5.9.0"
   },
   "devDependencies": {
+    "@earendil-works/pi-tui": "^1.0.4",
     "@types/pg": "^8.23.1",
+    "typebox": "^1.3.36",
     "vitest": "^3.2.0"
   }
 }

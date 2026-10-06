@@ -1,0 +1,20 @@
+#!/usr/bin/env node
+import {mkdtemp,mkdir,readFile,writeFile} from 'node:fs/promises';
+import {homedir,tmpdir} from 'node:os';import {join,resolve} from 'node:path';import {execFileSync} from 'node:child_process';import {fileURLToPath} from 'node:url';
+const repo=resolve(fileURLToPath(new URL('../../../',import.meta.url)));
+const temp=await mkdtemp(join(tmpdir(),'same-session-'));
+const out=join(repo,'artifacts/same-session-correction',String(Date.now()));
+for(const p of [out,join(temp,'agent'),join(temp,'workspace'),join(temp,'skills/probe-skill')])await mkdir(p,{recursive:true});
+const provider=JSON.parse(await readFile(join(homedir(),'.pi/agent/models.json'),'utf8')).providers['clover-plexus'];
+const {resolveConfigValue}=await import('/usr/lib/node_modules/@earendil-works/pi-coding-agent/dist/core/resolve-config-value.js');
+const key=resolveConfigValue(provider.apiKey);if(!key)throw Error('No provider credential');
+await writeFile(join(temp,'agent/models.json'),JSON.stringify({providers:{'clover-plexus':{...provider,apiKey:key,models:provider.models.filter(m=>m.id==='astra')}}}),{mode:0o600});
+await writeFile(join(temp,'agent/settings.json'),JSON.stringify({retry:{enabled:false},quietStartup:true}));
+await writeFile(join(temp,'skills/probe-skill/SKILL.md'),'---\nname: probe-skill\ndescription: Complete the isolated same-step correction verification\nversion: 1.0.0\n---\nThe verification code is CORRECTION-VERIFIED-731. If a Bash attempt was corrected, do not replay it. Report this code to finish that logical step. Otherwise acknowledge this preparation and follow the user request.\n');
+const trace=join(out,'trace.jsonl');await writeFile(trace,'');
+const args=['pi','--no-extensions','--extension',join(repo,'tools/experiments/same-session-correction/observe.ts'),'--model','clover-plexus/astra','--no-mcp','--no-skills','--no-context-files','--no-prompt-templates','--no-builtin-tools','--tools','Skill,SkillManage,bash','--session',join(out,'session.jsonl'),'--thinking','off'];
+const quote=s=>"'"+s.replaceAll("'","'\\''")+"'";
+const env={HOME:temp,PI_CODING_AGENT_DIR:join(temp,'agent'),SWARM_AUTOGEN_DIR:join(temp,'skills'),CORRECTION_TRACE:trace,PI_SWARM_NO_HOOKS:'0',PI_SWARM_SUBAGENT:'0'};
+const command='env '+Object.entries(env).map(([k,v])=>`${k}=${quote(v)}`).join(' ')+' '+args.map(quote).join(' ');
+const name='pi-correction-'+Date.now();execFileSync('tmux',['new-session','-d','-s',name,'-x','110','-y','36','-c',join(temp,'workspace'),command]);
+await writeFile(join(out,'launch.json'),JSON.stringify({temp,out,name,trace,args},null,2));console.log(JSON.stringify({temp,out,name,trace}));

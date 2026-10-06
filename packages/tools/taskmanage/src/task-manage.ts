@@ -87,12 +87,13 @@ import { ALLOWED, goNow, normalizeTaskManageParams, swarmValidateTaskManageParam
 export const OPERATION_FIELDS: Record<string, string[]> =
   Object.fromEntries(Object.entries(ALLOWED).map(([op, fields]) => [op, ["key", "op", ...fields]]));
 import { randomBytes } from "node:crypto";
-import { readFileSync, statSync, realpathSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync, statSync, realpathSync } from "node:fs";
 import { resolve as resolvePath, relative as relativePath, isAbsolute } from "node:path";
 
 export type JournalEntry = { type: "pi-swarm-task-state"; data: VersionedSnapshot<State> | State } | OperationEvent;
 export interface State { nextId: number; tasks: Task[]; keys: Record<string, string> }
-export interface TaskManagerOptions { workspaceRoot?: string; resolveEvidence?: (reference: string) => boolean | string }
+export interface TaskManagerOptions { workspaceRoot?: string; resolveEvidence?: (reference: string) => boolean | string; resolveSessionEvidence?: (reference: string) => boolean }
 export interface TaskMetrics { mutations: number; reads: number; failures: number; lastRevision: number }
 
 const fail = (code: string, message: string, retryable = false): Failure => ({ code, message, retryable });
@@ -103,7 +104,8 @@ const fail = (code: string, message: string, retryable = false): Failure => ({ c
  * Splitting naively on `;`/`,` would corrupt markdown headings, which legally
  * contain both ("file.md#Results, caveats"). A separator therefore only ends a
  * reference when what follows looks like the start of another one: a path-ish
- * token containing `/` or a file extension. Anything else is left alone, so an
+ * token containing `/` or a file extension, or a session tool reference
+ * (`tool:<Name>` / `tool:<Name>#<n>`). Anything else is left alone, so an
  * unsplittable string is still validated as a single reference exactly as
  * before.
  */
@@ -112,7 +114,7 @@ export function splitEvidence(evidence: string): string[] {
   // as often as "a.md#X; b.md#Y". The lookahead still keeps separators that
   // are part of a heading ("a.md#Worklog, caveats") unsplit, because the text
   // after them does not start another path-ish reference.
-  const parts = evidence.split(/[;,]\s*(?=[^\s;,]*(?:\/|\.[A-Za-z0-9]{1,8}(?:#|$)))/g)
+  const parts = evidence.split(/[;,]\s*(?=tool:[^\s;,]*|[^\s;,]*(?:\/|\.[A-Za-z0-9]{1,8}(?:#|$)))/g)
     .map(part => part.trim()).filter(Boolean);
   return parts.length ? parts : [evidence.trim()];
 }
@@ -147,7 +149,7 @@ const FIELD_SCHEMA: Record<string, () => Record<string, unknown>> = {
   noteType: () => ({ type: "string", enum: NOTE_TYPES }),
   include_audit: () => ({ type: "boolean" }),
   questions: () => ({ type: "array", minItems: 1, maxItems: MAX_TASK_QUESTIONS, items: { type: "object", required: ["id", "text"], additionalProperties: false, properties: { id: { type: "string", minLength: 1, maxLength: MAX_QUESTION_ID_LENGTH }, text: { type: "string", minLength: 1, maxLength: MAX_QUESTION_TEXT_LENGTH } } } }),
-  answers: () => ({ type: "array", minItems: 1, maxItems: MAX_TASK_QUESTIONS, items: { type: "object", required: ["question", "answer", "evidence"], additionalProperties: false, properties: { question: { type: "string", minLength: 1, maxLength: MAX_QUESTION_ID_LENGTH, description: "The id of the question being answered." }, answer: { type: "string", minLength: 1, maxLength: MAX_ANSWER_LENGTH }, evidence: { type: "string", minLength: 1, maxLength: MAX_EVIDENCE_LENGTH, description: "One or more workspace references, separated by \";\" or \",\": file#Lx-Ly, file#L42, file.md#Heading, or a bare file path. Every reference must resolve." } } } }),
+  answers: () => ({ type: "array", minItems: 1, maxItems: MAX_TASK_QUESTIONS, items: { type: "object", required: ["question", "answer", "evidence"], additionalProperties: false, properties: { question: { type: "string", minLength: 1, maxLength: MAX_QUESTION_ID_LENGTH, description: "The id of the question being answered." }, answer: { type: "string", minLength: 1, maxLength: MAX_ANSWER_LENGTH }, evidence: { type: "string", minLength: 1, maxLength: MAX_EVIDENCE_LENGTH, description: "One or more references, separated by \";\" or \",\": file#Lx-Ly, file#L42, file.md#Heading, a bare file path, or tool:<ToolName> with optional #<n> (1-based) citing a live tool result from this session. Every reference must resolve." } } } }),
 };
 
 /** Fields each op requires, beyond the universal `key` and `op`. */
@@ -411,6 +413,7 @@ export class TaskManager {
     private readonly persist?: (entry: JournalEntry) => void,
     private readonly emitOperation?: (event: OperationEvent) => void,
     private readonly options: TaskManagerOptions = {},
+  private worktrees: { at: number; roots: string[] } | undefined = undefined,
   ) {}
   snapshot(): State { return clone(this.state); }
   metrics(): TaskMetrics { return { ...this.stats }; }
@@ -641,7 +644,7 @@ export class TaskManager {
       if (!ids.has(answer.question)) return fail("validation_failed", `unknown question id: ${answer.question}`);
     }
     const missing = task.questions.filter(question => !seen.has(question.id));
-    if (missing.length) return fail("validation_failed", `missing answers for question(s): ${missing.map(question => `${question.id} (${question.text})`).join("; ")}. Re-read the task, then retry with status:"completed" and answers:[{question:"<question id>",answer:"<truthful answer>",evidence:"path/to/file.md#Heading or path/to/file.ts#L1-L2"}] for every listed question; do not invent answers or evidence`);
+    if (missing.length) return fail("validation_failed", `missing answers for question(s): ${missing.map(question => `${question.id} (${question.text})`).join("; ")}. Re-read the task, then retry with status:"completed" and answers:[{question:"<question id>",answer:"<truthful answer>",evidence:"path/to/file.md#Heading, path/to/file.ts#L1-L2, or tool:<ToolName>#<n> for a live tool result from this session"}] for every listed question; do not invent answers or evidence`);
     for (const answer of answers) {
       if (!answer.evidence) continue;
       const unresolved = splitEvidence(answer.evidence).filter(reference => !this.resolveEvidence(reference));
@@ -657,36 +660,64 @@ export class TaskManager {
    */
   private resolveEvidence(reference: string): boolean {
     if (this.options.resolveEvidence) return this.options.resolveEvidence(reference) === true;
+    if (/^tool:/i.test(reference)) return this.options.resolveSessionEvidence?.(reference) === true;
     const match = /^([^#]+?)(?:#(L\d+(?:-L\d+)?|[^#\s].*))?$/.exec(reference.trim());
     if (!match || !this.options.workspaceRoot) return false;
-    const root = resolvePath(this.options.workspaceRoot), file = resolvePath(root, match[1]);
-    const rel = relativePath(root, file);
-    if (isAbsolute(rel) || rel === ".." || rel.startsWith("../")) return false;
-    try {
-      const physical = relativePath(realpathSync(root), realpathSync(file));
-      if (isAbsolute(physical) || physical === ".." || physical.startsWith("../")) return false;
-      const stat = statSync(file); if (!stat.isFile() || stat.size > 1024 * 1024) return false;
-      const text = readFileSync(file, "utf8"), section = match[2];
-      if (section === undefined) return true;
-      const lines = /^L(\d+)(?:-L(\d+))?$/.exec(section);
-      if (lines) {
-        const start = Number(lines[1]), end = lines[2] === undefined ? start : Number(lines[2]);
-        return start >= 1 && end >= start && end <= text.split("\n").length;
-      }
-      if (!/\.md$/i.test(file)) return false;
-      // Headings legally contain ?, parentheses, commas and other punctuation
-      // (trebol#36). Match the quoted section exactly, as a GitHub-style dash
-      // slug, or punctuation-insensitively on both sides, so an agent quoting
-      // the heading with or without its punctuation still resolves.
-      const loose = (value: string) => value.trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
-      return text.split("\n").some(line => {
-        if (!/^#{1,6}\s+/.test(line)) return false;
-        const heading = line.replace(/^#{1,6}\s+/, "").trim();
-        return heading === section ||
-          heading.toLowerCase().replace(/[^\p{L}\p{N} _-]/gu, "").replace(/ /g, "-") === section ||
-          loose(heading) === loose(section);
-      });
-    } catch { return false; }
+    // A workspace-relative citation resolves against the primary root first;
+    // failing that, against the repository's linked worktrees (trebol#124,
+    // trebol#127): agents routinely work in an isolated worktree while the
+    // host process keeps the main checkout as cwd, and absolute citations
+    // into that worktree must resolve too.
+    const roots = [resolvePath(this.options.workspaceRoot), ...this.linkedWorktreeRoots()];
+    for (const root of roots) {
+      const file = resolvePath(root, match[1]);
+      const rel = relativePath(root, file);
+      if (isAbsolute(rel) || rel === ".." || rel.startsWith("../")) continue;
+      try {
+        const physical = relativePath(realpathSync(root), realpathSync(file));
+        if (isAbsolute(physical) || physical === ".." || physical.startsWith("../")) continue;
+        const stat = statSync(file); if (!stat.isFile() || stat.size > 1024 * 1024) continue;
+        const text = readFileSync(file, "utf8"), section = match[2];
+        if (section === undefined) return true;
+        const lines = /^L(\d+)(?:-L(\d+))?$/.exec(section);
+        if (lines) {
+          const start = Number(lines[1]), end = lines[2] === undefined ? start : Number(lines[2]);
+          return start >= 1 && end >= start && end <= text.split("\n").length;
+        }
+        if (!/\.md$/i.test(file)) return false;
+        // Headings legally contain ?, parentheses, commas and other punctuation
+        // (trebol#36). Match the quoted section exactly, as a GitHub-style dash
+        // slug, or punctuation-insensitively on both sides, so an agent quoting
+        // the heading with or without its punctuation still resolves.
+        const loose = (value: string) => value.trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+        return text.split("\n").some(line => {
+          if (!/^#{1,6}\s+/.test(line)) return false;
+          const heading = line.replace(/^#{1,6}\s+/, "").trim();
+          return heading === section ||
+            heading.toLowerCase().replace(/[^\p{L}\p{N} _-]/gu, "").replace(/ /g, "-") === section ||
+            loose(heading) === loose(section);
+        });
+      } catch { continue; }
+    }
+    return false;
+  }
+  /**
+   * Linked worktrees of the workspace repository, primary root excluded.
+   * Discovery shells out to `git worktree list` at most once per 60 seconds
+   * and degrades to an empty list outside a git repository or without git.
+   */
+  private linkedWorktreeRoots(): string[] {
+    const now = Date.now();
+    if (!this.worktrees || now - this.worktrees.at > 60_000) {
+      let list: string[] = [];
+      try {
+        const out = execFileSync("git", ["-C", String(this.options.workspaceRoot), "worktree", "list", "--porcelain"], { timeout: 5000, stdio: ["ignore", "pipe", "ignore"] }).toString();
+        list = out.split("\n").filter(line => line.startsWith("worktree ")).map(line => line.slice("worktree ".length));
+      } catch { list = []; }
+      this.worktrees = { at: now, roots: list };
+    }
+    const primary = this.options.workspaceRoot ? realpathSync(this.options.workspaceRoot) : "";
+    return this.worktrees.roots.filter(root => root !== primary).filter(root => existsSync(root));
   }
   execute(params: Params, signal?: AbortSignal): Batch {
     if (!isObj(params) || Object.keys(params).some(key => key !== "operations" && key !== "mode"))
@@ -949,6 +980,26 @@ export class TaskManager {
   }
 }
 
+/**
+ * Resolve a session tool reference against the live Pi session branch.
+ *
+ * `tool:<Name>` cites the most recent tool result produced by that tool;
+ * `tool:<Name>#<n>` cites the n-th (1-based, chronological) result. The
+ * session manager is read at validation time, so results recorded earlier in
+ * the same turn are visible. Unknown tools, absent indices and out-of-range
+ * indices all fail closed.
+ */
+export function resolveToolEvidence(reference: string, sessionManager: { getEntries(): readonly unknown[]; getBranch?(): readonly unknown[] } | undefined): boolean {
+  const match = /^tool:([A-Za-z0-9_-]+)(?:#(\d+))?$/i.exec(reference.trim());
+  if (!match || !sessionManager) return false;
+  const name = match[1];
+  const results = ((sessionManager.getBranch?.() ?? sessionManager.getEntries()) as any[])
+    .filter(entry => entry?.type === "message" && entry.message?.role === "toolResult" && entry.message?.toolName === name);
+  if (!match[2]) return results.length > 0;
+  const index = Number(match[2]);
+  return index >= 1 && index <= results.length;
+}
+
 export function registerTaskManage(pi: { registerTool(tool: unknown): void; appendEntry(type: string, data: unknown): void; on(event: string, handler: (event: unknown, ctx: {sessionManager?: {getEntries(): readonly unknown[]; getBranch?(): readonly unknown[]}; ui?: {setWidget(key: string, content: unknown): void}})=>void): void }, presentation = taskManageRenderers, options: TaskManagerOptions = {}): TaskManager {
   const manager = new TaskManager(
     entry => pi.appendEntry(entry.type, entry.data),
@@ -956,6 +1007,7 @@ export function registerTaskManage(pi: { registerTool(tool: unknown): void; appe
     options,
   );
   let ui: {setWidget(key: string, content: unknown): void} | undefined;
+  let sessionManager: { getEntries(): readonly unknown[]; getBranch?(): readonly unknown[] } | undefined;
   const refreshWidget = (ctx?: {ui?: {setWidget(key: string, content: unknown): void}}) => {
     ui = ctx?.ui ?? ui;
     if (!ui) return;
@@ -966,10 +1018,12 @@ export function registerTaskManage(pi: { registerTool(tool: unknown): void; appe
       : undefined);
   };
   pi.on("session_start", (_event, ctx) => {
+    sessionManager = ctx.sessionManager;
     manager.rehydrate((ctx.sessionManager?.getBranch?.() ?? ctx.sessionManager?.getEntries() ?? []) as JournalEntry[]);
     refreshWidget(ctx);
   });
-  pi.registerTool({ name:"TaskManage", label:"Manage tasks", description:"Manage ordered tasks. Optional compact questions {id,text}; answer each with {question,answer,evidence} in the same completed update. Evidence uses workspace file#heading or file#Lx-Ly. Keep detail in files. sequential commits the successful prefix; atomic commits all or rolls back.", parameters:taskManageSchema,
+  options.resolveSessionEvidence ??= reference => resolveToolEvidence(reference, sessionManager);
+  pi.registerTool({ name:"TaskManage", label:"Manage tasks", description:"Manage ordered tasks. Optional compact questions {id,text}; answer each with {question,answer,evidence} in the same completed update. Evidence uses workspace file#heading, file#Lx-Ly, or tool:<ToolName>[#<n>] for a live tool result from this session. Keep detail in files. sequential commits the successful prefix; atomic commits all or rolls back.", parameters:taskManageSchema,
     renderShell: "self",
     promptSnippet: "TaskManage: track multi-step work with durable ordered tasks.",
     promptGuidelines: ["Use TaskManage for multi-step work; keep exactly one active task when working sequentially; before starting work set the selected task status=\"in_progress\" and active=true; after verifying a task's acceptance criteria, explicitly update it with status=\"completed\" and activate the next unblocked task."],
@@ -993,7 +1047,8 @@ export function registerTaskManage(pi: { registerTool(tool: unknown): void; appe
         // An unparseable params object normalizes to undefined; the validation
         // message above is still the primary payload, so never crash the error
         // path while decorating it with per-operation details.
-        Object.assign(error, { details: { batch: { status: "failed", results: (normalizedParams as Params | undefined)?.operations?.map((operation, index) => {
+        const operations = (normalizedParams as Params | undefined)?.operations;
+        Object.assign(error, { details: { batch: { status: "failed", results: (Array.isArray(operations) ? operations : []).map((operation, index) => {
           const key = typeof operation?.key === "string" ? operation.key : String(index);
           const isOffender = offending === undefined ? index === 0 : key === offending;
           return { key, op: operation?.op, status: isOffender ? "failed" : "skipped", ...(isOffender ? { error: { code: "validation_failed", message: invalid, retryable: false } } : {}) };

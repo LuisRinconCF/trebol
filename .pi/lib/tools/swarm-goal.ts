@@ -6,6 +6,7 @@ import { parseDelay, nextCronTime, validateCron } from "../../../packages/tools/
 import { withDefaultToolRenderer } from "../../../packages/runtime/core/src/tool-renderer.ts";
 import { createSessionWakeup } from "../runtime/session-wakeup.ts";
 import { onAgentSettled } from "../runtime/agent-settled.ts";
+import { registerScheduleStatus, type PendingSchedule } from "../runtime/schedule-status.ts";
 
 export type GoalVerdict = "MET" | "NOT_MET" | "IMPOSSIBLE";
 export type GoalEvaluator = (condition: string, transcriptPath: string, ctx: any) => Promise<GoalVerdict>;
@@ -121,6 +122,16 @@ export function registerSwarmGoal(pi: any, options: SwarmGoalOptions = {}) {
   let live = true;
   let evaluating = false;
   let context: any;
+  let removeScheduleStatus: (() => void) | undefined;
+  const nextSchedule = (now: number): PendingSchedule | undefined => {
+    if (!live) return;
+    let next: Schedule | undefined;
+    for (const s of schedules.values()) {
+      if (!s.valid() || !Number.isFinite(s.nextAt) || now >= s.expiresAt || s.nextAt >= s.expiresAt) continue;
+      if (!next || s.nextAt < next.nextAt) next = s;
+    }
+    return next ? { nextAt: next.nextAt, kind: next.loop || next.kind === "interval" ? "loop" : "schedule" } : undefined;
+  };
   const notify = (text: string, level = "info") => context?.ui?.notify?.(text, level);
   const persist = () => pi.appendEntry?.(ENTRY, goal ?? { status: "cleared" });
   const describe = (s: Schedule) => ({ id: s.id, prompt: s.prompt, kind: s.kind, value: s.value, next_fire_at: new Date(s.nextAt).toISOString(), loop: s.loop });
@@ -181,6 +192,9 @@ export function registerSwarmGoal(pi: any, options: SwarmGoalOptions = {}) {
   pi.on("session_start", (_event: any, ctx: any) => {
     revision++; live = true; context = ctx; goal = undefined;
     for (const s of schedules.values()) clearTimeout(s.timer); schedules.clear();
+    removeScheduleStatus?.();
+    const sessionId = ctx.sessionManager?.getSessionId?.();
+    removeScheduleStatus = sessionId ? registerScheduleStatus(sessionId, nextSchedule) : undefined;
     const entries = ctx.sessionManager?.getBranch?.() ?? [];
     const last = [...entries].reverse().find((e: any) => e.customType === ENTRY);
     if (last?.data?.condition && ["active", "met", "impossible", "error"].includes(last.data.status)) goal = { ...last.data };
@@ -214,7 +228,7 @@ export function registerSwarmGoal(pi: any, options: SwarmGoalOptions = {}) {
       if (owner() && version === revision && goal === current) { current.status = "error"; persist(); notify(`Goal evaluation stopped: ${error instanceof Error ? error.message : error}`, "error"); }
     } finally { evaluating = false; await unlink(transcriptPath).catch(() => {}); }
   });
-  pi.on("session_shutdown", () => { live = false; revision++; for (const s of schedules.values()) clearTimeout(s.timer); schedules.clear(); });
+  pi.on("session_shutdown", () => { live = false; revision++; for (const s of schedules.values()) clearTimeout(s.timer); schedules.clear(); removeScheduleStatus?.(); removeScheduleStatus = undefined; });
   const api = { getGoal: () => goal };
   registrations.set(pi, api);
   return api;
