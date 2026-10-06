@@ -4,14 +4,15 @@
   "description": "Pi-Swarm extension layer 50-ui: control panel, metrics widgets, themes, tools-status command, Windows image paste. Load order within the layer is this list; layers load in numeric prefix order.",
   "pi": {
     "extensions": [
-      "control-panel.ts",
-      "supervisor.ts",
-      "conversation-metrics.ts",
-      "clover-startup.ts",
-      "swarm-themes.ts",
-      "swarm-tools-status.ts",
-      "swarm-btw.ts",
-      "swarm-image-paste.ts"
+      ".trebol-guards/00-control-panel.ts",
+      ".trebol-guards/01-supervisor.ts",
+      ".trebol-guards/02-conversation-metrics.ts",
+      ".trebol-guards/03-clover-startup.ts",
+      ".trebol-guards/04-swarm-themes.ts",
+      ".trebol-guards/05-swarm-tools-status.ts",
+      ".trebol-guards/06-swarm-btw.ts",
+      ".trebol-guards/07-swarm-image-paste.ts",
+      ".trebol-guards/08-green-chat-input.ts"
     ]
   }
 }

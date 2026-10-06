@@ -4,13 +4,13 @@
   "description": "Pi-Swarm extension layer 40-state: durable session entries: memory history, conversation metadata. Load order within the layer is this list; layers load in numeric prefix order.",
   "pi": {
     "extensions": [
-      "memory-history.ts",
-      "task-candidate-capture.ts",
-      "knowledge-enrichment.ts",
-      "candidate-memory-review.ts",
-      "jev-knowledge-audit.ts",
-      "memory-maintenance.ts",
-      "swarm-conversation-metadata.ts"
+      ".trebol-guards/00-memory-history.ts",
+      ".trebol-guards/01-task-candidate-capture.ts",
+      ".trebol-guards/02-knowledge-enrichment.ts",
+      ".trebol-guards/03-candidate-memory-review.ts",
+      ".trebol-guards/04-jev-knowledge-audit.ts",
+      ".trebol-guards/05-memory-maintenance.ts",
+      ".trebol-guards/06-swarm-conversation-metadata.ts"
     ]
   }
 }
