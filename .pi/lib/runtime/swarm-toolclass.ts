@@ -11,7 +11,7 @@ export const normalizeToolName = (name: string) => name.replace(/_/g, "").toLowe
 export const isTaskManagementTool = (name: string) =>
   ["taskcreate", "tasklist", "taskget", "taskupdate", "taskmanage", "todowrite", "todoread"].includes(normalizeToolName(name));
 export const isTaskManageTool = (name: string) => normalizeToolName(name) === "taskmanage";
-/** CodeMode is an orchestration wrapper; nested calls use the normal hook bridge. */
+/** Pi's CodeMode tool is an orchestration wrapper; nested calls remain policy-governed. */
 export const isCodeModeTool = (name: string) => normalizeToolName(name) === "codemode";
 export const isSkillTool = (name: string) =>
   ["skillmanage", "skillinvoke", "skillcall", "useskill", "skillexec", "skill"].includes(normalizeToolName(name));
