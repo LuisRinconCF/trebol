@@ -87,7 +87,7 @@ After a finished response, if and only if a concrete authorized next action rema
 
   pi.on("agent_before_settle", (event: any, ctx: any) => {
     if (!enabled || !externalRequest || event.outcome !== "completed" || event.continue || ctx?.hasPendingMessages?.()) return;
-    const transcript = event.context.contextMessages ?? [];
+    const transcript = event.context?.contextMessages ?? [];
     const last = [...transcript].reverse().find((m: any) => m?.role === "assistant");
     if (!last || last.stopReason !== "stop") {
       reset();
@@ -107,7 +107,7 @@ After a finished response, if and only if a concrete authorized next action rema
     unproductiveTurns = usedTool ? 0 : unproductiveTurns + 1;
     if (unproductiveTurns > 1) { reset(); syncFooter(ctx); ctx.ui?.notify?.("Auto mode stopped: two continuations without tool evidence.", "warning"); return; }
     lastContinuation = progress;
-    return { continue: true, entries: [...event.entries, {
+    return { continue: true, entries: [...(event.entries ?? []), {
       type: "custom_message", customType: AUTO_MESSAGE, display: false,
       content: "Continue the current user task with the next concrete action. Review new evidence; stop if done, blocked, interrupted or awaiting user input. Do not repeat the previous action."
     }] };

@@ -10,7 +10,7 @@ const mappings=JSON.parse(readFileSync(resolve(base,'project-map.json'),'utf8'))
 const cwds=[...new Set<string>(mappings.rows.filter((r:any)=>r.mapping.status==='mapped').map((r:any)=>r.mapping.target_cwd))];
 const code:Record<string,[string,string]>={
  '2614734c-0dda-43aa-a497-05d53c4d2792':['packages/tools/taskmanage/src/task-manage.ts','if (missing.length) return fail'],
- '5b7485f9-d50a-4de0-8b4b-1d9e6873dc37':['extensions/swarm-runtime/extension.ts','state.mcp = new MCPManager'],
+ '5b7485f9-d50a-4de0-8b4b-1d9e6873dc37':['extensions/mcp-fallback/extension.ts','state.mcp = new MCPManager'],
  'c47fed20-d23b-4a7e-b3ba-93b2554ebd8c':['extensions/swarm-btw/extension.ts','appendSystemPrompt: [prompt.appendSystemPrompt, SIDE_PROMPT]']
 };
 const receiptPath=resolve(base,'citation-repair-receipt.json');

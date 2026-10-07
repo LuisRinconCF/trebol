@@ -1,5 +1,6 @@
 /** Scoped compatibility adapter: shortcuts lack command-context reload.
- * One lease per extension owner; last release restores our host patch only.
+ * One lease per extension owner; callers must retain/release it on shutdown.
+ * Release is idempotent. Last release restores our host patch only.
  */
 const installed = Symbol.for("pi-swarm-trebol-shortcut-adapter-v2");
 export const trebolShortcut = Symbol.for("pi-swarm-trebol-shortcut-handler");

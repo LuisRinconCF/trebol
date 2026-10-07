@@ -1,3 +1,4 @@
+// Structural host/test adapters intentionally accept heterogeneous event and tool payloads; runtime guards narrow the fields used here.
 import { randomUUID } from "node:crypto";
 import { dispatchRegisteredHook } from "./hook-state.ts";
 

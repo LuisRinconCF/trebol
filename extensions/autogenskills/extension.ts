@@ -1,5 +1,4 @@
 import { registerSupervisorBudget } from "../../.pi/lib/context/supervisor-live-state.ts";
-import { isHookEnabled } from "../../.pi/lib/runtime/hook-state.ts";
 import { registerAutoSkills, type Config } from "../../packages/context/autogenskills/src/index.ts";
 import { AUTOGEN_BUDGET_SOURCE } from "../../.pi/lib/runtime/swarm-builtin-hooks.ts";
 import { fileURLToPath } from "node:url";

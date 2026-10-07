@@ -1,3 +1,4 @@
+// Intentionally invokes the implementation for isolated retrieval experiments; production index/toggle loading is covered by tools/install/check-load.mjs.
 #!/usr/bin/env node
 /** Real registered memory_history -> real isolated Pi child, five synthetic cases per strategy.
  * Run: ./node_modules/.bin/vite-node tools/experiments/memory-retrieval/live-five.mjs
@@ -80,7 +81,7 @@ async function runChild(command,args,opts,trace) {
 try {
   for (const method of wanted) {
     const root=join(sandbox,method);
-    mkdirSync(join(root,'.pi/extensions/40-state'),{recursive:true});
+    mkdirSync(join(root,'extensions/memory-history'),{recursive:true});
     mkdirSync(join(root,'packages/runtime/core/src'),{recursive:true});
     cpSync(join(repo,'.pi/lib'),join(root,'.pi/lib'),{recursive:true});
     cpSync(join(repo,'extensions/memory-history/extension.ts'),join(root,'extensions/memory-history/extension.ts'));

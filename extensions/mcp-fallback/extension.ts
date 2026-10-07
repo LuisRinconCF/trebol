@@ -1,3 +1,4 @@
+// Structural host/test adapters intentionally accept heterogeneous event and tool payloads; runtime guards narrow the fields used here.
 import { resolve } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
 import { MCPManager } from "../../packages/tools/mcp/src/index.ts";
@@ -17,9 +18,9 @@ function loadMcpManifests(pi: Pi, cwd: string): any[] {
     try {
       const raw = JSON.parse(readFileSync(file, "utf8"));
       const servers = raw?.mcpServers ?? raw?.servers ?? raw;
-      if (!servers || typeof servers !== "object" || Array.isArray(servers)) continue;
+      if (!servers || typeof servers !== "object" || Array.isArray(servers)) throw new Error("invalid manifest shape");
       return Object.entries(servers).map(([id, value]: [string, any]) => ({ id, enabled: value?.enabled !== false, ...value, type: value?.type ?? (value?.command ? "stdio" : "http") }));
-    } catch { return []; }
+    } catch { pushStartupNotice(`MCP configuration is invalid or unreadable: ${file}`, "error"); return []; }
   }
   return [];
 }
@@ -48,7 +49,7 @@ export function registerMcpFallback(pi: Pi, options: { cwd?: string; closed?: bo
     const requested = args.trim();
     if (requested === "discover" || requested.startsWith("discover ")) {
       const id = requested.slice("discover".length).trim();
-      if (!id) return ctx.ui?.notify?.("Usage: /mcp discover <server>", "warning");
+      if (!id) return ctx.ui?.notify?.("Usage: /swarm-mcp discover <server>", "warning");
       try { const tools = await state.mcp?.discover(id); ctx.ui?.notify?.(`${id}: ${tools?.map((t: any) => t.name).join(", ") || "no tools"}`, "info"); }
       catch (error) { ctx.ui?.notify?.(error instanceof Error ? error.message : String(error), "error"); }
       return;
@@ -69,7 +70,7 @@ export function registerMcpFallback(pi: Pi, options: { cwd?: string; closed?: bo
     await discoverMcp();
   });
   pi.on?.("session_shutdown", () => { void state.mcp?.close(); state.mcp = undefined; });
-  pi.registerCommand?.("swarm-runtime", { description: "Inspect integrated Pi-Swarm runtime", handler: async (_args: string, ctx: any) => ctx.ui?.notify?.(`Pi-Swarm runtime active at ${cwd}; mcp=${manifests.length}`, "info") });
+  pi.registerCommand?.("swarm-runtime", { description: "Inspect MCP fallback (legacy command name)", handler: async (_args: string, ctx: any) => ctx.ui?.notify?.(`MCP fallback active at ${cwd}; mcp=${manifests.length}`, "info") });
   return state;
 }
 

@@ -43,6 +43,7 @@ export function installBootstrapSettings(SettingsList: any, access: BootstrapSet
   return () => {
     if (state.access !== access) return;
     state.access = undefined;
+    // Re-read current host arrays; the host may replace them between renders.
     for (const list of state.lists) {
       for (const items of new Set([list.items, list.filteredItems])) {
         if (!Array.isArray(items)) continue;

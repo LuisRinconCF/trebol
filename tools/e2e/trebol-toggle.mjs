@@ -5,14 +5,14 @@ import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const repo = resolve(new URL('../..', import.meta.url).pathname);
-const {resolvePiHost} = await import('../install/pi-host.mjs');
+const {resolvePiHost,extensionEntries} = await import('../install/pi-host.mjs');
 const piRoot = resolvePiHost({executable:process.env.PI_EXECUTABLE}).root;
 const { discoverAndLoadExtensions } = await import(pathToFileURL(join(piRoot, 'dist/core/extensions/loader.js')));
 const temp = mkdtempSync(join(tmpdir(), 'trebol-toggle-e2e-'));
 try {
   const local = join(temp, '.pi', 'extensions');
   mkdirSync(local, { recursive: true });
-  const manifestDirs = JSON.parse(readFileSync(join(repo,'package.json'),'utf8')).pi.extensions.map(p=>join(repo,p));
+  const manifestDirs = extensionEntries(repo).map(p=>join(repo,p));
   const cwd = temp;
   const agentDir = join(temp, 'agent');
   mkdirSync(join(agentDir, 'extensions'), { recursive: true });

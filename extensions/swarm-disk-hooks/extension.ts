@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { HookRuntimeCoordinator, type HookDefinition } from "../../packages/tools/taskmanage/src/swarm-hook-runtime.ts";
+import { HookRuntimeCoordinator } from "../../packages/tools/taskmanage/src/swarm-hook-runtime.ts";
 import { registerHook } from "../../.pi/lib/runtime/hook-state.ts";
 
 interface DiskHook { type?: string; command?: string; prompt?: string; timeout?: number; }

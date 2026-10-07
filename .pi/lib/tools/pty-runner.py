@@ -14,6 +14,9 @@ import time
 master, slave = os.openpty()
 try:
     child = subprocess.Popen(sys.argv[1:], stdin=subprocess.DEVNULL, stdout=slave, stderr=slave)
+except BaseException:
+    os.close(master)
+    raise
 finally:
     os.close(slave)
 ended = None

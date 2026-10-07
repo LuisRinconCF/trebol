@@ -1,7 +1,6 @@
 import { existsSync, lstatSync, realpathSync } from "node:fs";
 import { BUILTIN_SOURCES } from "../../.pi/lib/context/swarm-context.ts";
-import { loadPromptContextConfig, savePromptContextConfig, type PromptContextConfig } from "../../.pi/lib/context/swarm-prompt-context-config.ts";
-import { pathInsideWorkspace } from "../../.pi/lib/context/swarm-prompt-context-config.ts";
+import { loadPromptContextConfig, savePromptContextConfig, pathInsideWorkspace, type PromptContextConfig } from "../../.pi/lib/context/swarm-prompt-context-config.ts";
 import { getSwarmSkillRegistry } from "../../.pi/lib/context/swarm-skill-registry.ts";
 
 type UI = { select(title: string, options: string[]): Promise<string | undefined>; input(title: string, placeholder?: string): Promise<string | undefined>; notify(message: string, type?: "info" | "warning" | "error"): void };

@@ -26,3 +26,7 @@ it("lets the host report subscriber errors", async () => {
   const h = harness(); onAgentSettled(h.pi, () => { throw new Error("reported"); });
   await expect(h.emit("agent_settled")).rejects.toThrow("reported");
 });
+it("propagates asynchronous subscriber rejection", async () => {
+  const h = harness(); onAgentSettled(h.pi, async () => { throw new Error("async reported"); });
+  await expect(h.emit("agent_settled")).rejects.toThrow("async reported");
+});

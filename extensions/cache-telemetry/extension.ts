@@ -1,3 +1,4 @@
+// Structural host/test adapters intentionally accept heterogeneous event and tool payloads; runtime guards narrow the fields used here.
 import { createHash } from "node:crypto";
 import { hookTelemetry } from "../../.pi/lib/runtime/hook-state.ts";
 const hash = (x: unknown) => createHash("sha256").update(JSON.stringify(x)).digest("hex");

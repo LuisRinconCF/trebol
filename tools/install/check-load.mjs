@@ -4,12 +4,12 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { resolvePiHost } from "./pi-host.mjs";
+import { resolvePiHost, extensionEntries } from "./pi-host.mjs";
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const host = resolvePiHost({ executable: process.env.PI_EXECUTABLE });
 const temporary = mkdtempSync(join(tmpdir(), "trebol-install-check-"));
-const deadline = setTimeout(() => { console.error("FAIL package load exceeded 60 seconds"); process.exit(1); }, 60_000);
+const deadline = setTimeout(() => { console.error("FAIL package load exceeded 60 seconds"); rmSync(temporary, { recursive: true, force: true }); process.exit(1); }, 60_000);
 let status = 1;
 try {
   const { DefaultResourceLoader, SettingsManager } = await import(host.sdkUrl);
@@ -17,7 +17,7 @@ try {
   mkdirSync(cwd); mkdirSync(agentDir);
   const index = process.argv.indexOf("--extension");
   const entry = index >= 0 ? process.argv[index + 1] : undefined;
-  if (index >= 0 && !JSON.parse(readFileSync(join(repo, "package.json"), "utf8")).pi.extensions.includes(entry)) throw new Error("--extension must name an enabled manifest entry");
+  if (index >= 0 && !extensionEntries(repo).includes(entry)) throw new Error("--extension must name an enabled manifest entry");
   writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ packages: [entry ? { source: repo, extensions: [entry] } : repo] }));
   const loader = new DefaultResourceLoader({ cwd, agentDir,
     settingsManager: SettingsManager.create(cwd, agentDir),

@@ -4,6 +4,8 @@ Release metadata is kept in `package.json`, `update-manifest.json`, and this fil
 
 ## [Unreleased]
 
+- Flatten Pi extensions into individually selectable entries, preserve the tool surface, adopt native settlement/continuation, scope compatibility handlers, and repair macOS PTY execution and installation diagnostics.
+
 - Add an open issue triage script under `tools/experiments` for batching repository issue review.
 - Accept live tool results as TaskManage evidence, so in-session tool output can back completion answers.
 - Rely on Pi's native CodeMode tool instead of the custom codemode registration.

@@ -1,5 +1,5 @@
 import { boundedHistoryJSON, historyGet, historyRootFromContext, historySearch } from "../../.pi/lib/tools/swarm-history-tools.ts";
-import { vaultJSONXML, type VaultRuntime } from "../../.pi/lib/tools/swarm-vault-tools.ts";
+import { vaultJSONXML } from "../../.pi/lib/tools/swarm-vault-tools.ts";
 import { newErrorID } from "../../.pi/lib/tools/swarm-bash.ts";
 import { applySwarmSurface } from "../../.pi/lib/runtime/swarm-tool-surface.ts";
 import { CONTRACTS } from "../../.pi/lib/tools/swarm-history-tools.contract.ts";
@@ -24,7 +24,7 @@ function failed(name: string, error: unknown) {
   throw new Error(`Error executing ${name}: ${message} (error_id=${newErrorID()})`);
 }
 
-export function registerSwarmHistoryVaultTools(pi: Pi, options: { historyRoot?: string; cwd?: string; vault?: VaultRuntime } = {}): void {
+export function registerSwarmHistoryVaultTools(pi: Pi, options: { historyRoot?: string; cwd?: string } = {}): void {
   if (registrations.has(pi as object)) return;
   registrations.add(pi as object);
   let sessionContext: any;

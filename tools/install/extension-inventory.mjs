@@ -6,8 +6,12 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { resolvePiHost } from "./pi-host.mjs";
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+for (const flag of ["--write", "--compare"]) {
+  const index = process.argv.indexOf(flag);
+  if (index >= 0 && (!process.argv[index + 1] || process.argv[index + 1].startsWith("--"))) throw new Error(`${flag} requires a path`);
+}
 const dir = mkdtempSync(join(tmpdir(), "trebol-inventory-"));
-const timeout = setTimeout(() => { console.error("Inventory timeout"); process.exit(1); }, 60_000);
+const timeout = setTimeout(() => { console.error("Inventory timeout"); rmSync(dir, { recursive: true, force: true }); process.exit(1); }, 60_000);
 let code = 0;
 try {
   const { DefaultResourceLoader, SettingsManager } = await import(resolvePiHost({ executable: process.env.PI_EXECUTABLE }).sdkUrl);

@@ -203,3 +203,15 @@ describe("Swarm agent orchestration tools", () => {
     d.resolve("done");
   });
 });
+
+it("reuses a pre-registered manager and registers both tool families only once", async () => {
+  const { default: extension } = await import("../../../extensions/swarm-agent-tools/extension.ts");
+  const manager = new AgentManager({ runner: async () => "ok" });
+  const tools: any[] = [];
+  const pi: any = { registerTool: (tool: any) => tools.push(tool), on: () => {} };
+  registerSwarmAgentTools(pi, { manager });
+  extension(pi); extension(pi);
+  expect(pi[Symbol.for("pi-swarm.agent-manager")]).toBe(manager);
+  expect(tools.filter(tool => tool.name === "Agent")).toHaveLength(1);
+  expect(tools.filter(tool => tool.name === "BackgroundTask")).toHaveLength(1);
+});

@@ -221,9 +221,7 @@ export function registerSwarmGoal(pi: any, options: SwarmGoalOptions = {}) {
       if (!owner() || version !== revision || goal !== current) return;
       if (!["MET", "NOT_MET", "IMPOSSIBLE"].includes(verdict)) throw new Error("invalid goal verdict");
       if (verdict !== "NOT_MET") { current.status = verdict === "MET" ? "met" : "impossible"; persist(); notify(`Goal ${current.status}: ${current.condition}`); return; }
-      // Release the evaluation guard before scheduling the next turn.
-      evaluating = false;
-      return { continue: true, entries: [..._event.entries, { type: "custom_message", customType: "swarm-goal", content: `Goal check: NOT_MET. Continue working toward: ${current.condition}\nOther schedules: ${JSON.stringify([...schedules.values()].map(describe))}`, display: true }] };
+      return { continue: true, entries: [...(_event.entries ?? []), { type: "custom_message", customType: "swarm-goal", content: `Goal check: NOT_MET. Continue working toward: ${current.condition}\nOther schedules: ${JSON.stringify([...schedules.values()].map(describe))}`, display: true }] };
     } catch (error) {
       if (owner() && version === revision && goal === current) { current.status = "error"; persist(); notify(`Goal evaluation stopped: ${error instanceof Error ? error.message : error}`, "error"); }
     } finally { evaluating = false; await unlink(transcriptPath).catch(() => {}); }

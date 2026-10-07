@@ -22,6 +22,11 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const settings = JSON.parse(readFileSync(file, "utf8"));
   const moves = JSON.parse(readFileSync(new URL("../repo/extension-moves.json", import.meta.url), "utf8"));
   let unresolved = false;
+  if (Array.isArray(settings.extensions)) {
+    const result = migrateFilters(settings.extensions, moves);
+    console.log(JSON.stringify({ scope: "extensions", changes: result.changes, unresolved: result.unresolved }, null, 2));
+    unresolved ||= result.unresolved.length > 0;
+  }
   for (const [index, pkg] of (settings.packages ?? []).entries()) {
     if (!pkg || typeof pkg === "string" || !Array.isArray(pkg.extensions)) continue;
     const result = migrateFilters(pkg.extensions, moves);

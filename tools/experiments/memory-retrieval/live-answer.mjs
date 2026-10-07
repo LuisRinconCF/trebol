@@ -1,3 +1,4 @@
+// Intentionally invokes the implementation for isolated retrieval experiments; production index/toggle loading is covered by tools/install/check-load.mjs.
 #!/usr/bin/env node
 // Real registered tool -> real isolated Pi child. Synthetic temporary records only.
 // Run: ./node_modules/.bin/vite-node tools/experiments/memory-retrieval/live-answer.mjs
@@ -12,7 +13,7 @@ mkdirSync(output,{recursive:true});
 process.env.PI_SWARM_MEMORY_DIR=join(root,'store');
 const dir=join(root,'workspace');
 try {
- mkdirSync(join(dir,'.pi/extensions/40-state'),{recursive:true});mkdirSync(join(dir,'packages/runtime/core/src'),{recursive:true});
+ mkdirSync(join(dir,'extensions/memory-history'),{recursive:true});mkdirSync(join(dir,'packages/runtime/core/src'),{recursive:true});
  cpSync(join(cwd,'.pi/lib'),join(dir,'.pi/lib'),{recursive:true});
  cpSync(join(cwd,'extensions/memory-history/extension.ts'),join(dir,'extensions/memory-history/extension.ts'));
  cpSync(join(cwd,'packages/runtime/core/src/tool-renderer.ts'),join(dir,'packages/runtime/core/src/tool-renderer.ts'));

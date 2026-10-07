@@ -16,7 +16,7 @@ import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { inspectPackageSources } from "./package-sources.mjs";
+import { inspectPackageSources, isManagedClone } from "./package-sources.mjs";
 
 const args = process.argv.slice(2);
 const opt = (name, fallback) => { const i = args.indexOf(name); return i === -1 ? fallback : args[i + 1]; };
@@ -106,10 +106,7 @@ function checkSettings() {
     report(`theme ${theme} shipped by this checkout`, existsSync(file), file, "pick a theme from .pi/themes or install this repo as a package so its themes load");
   } else report("theme", true, theme ? `${theme} (not a swarm-* theme)` : "default");
   const { local, competing } = inspectPackageSources(settings.packages, path, REPO);
-  const installedClone = competing.some((source) => {
-    const match = source.match(/^(?:git:|https:\/\/|ssh:\/\/)(github\.com)[/:](cloverinternational\/[^@]+?)(?:\.git)?(?:@[^/]+)?$/i);
-    return match && resolve(AGENT_DIR, "git", match[1], match[2]) === REPO;
-  });
+  const installedClone = competing.some(source => isManagedClone(source, AGENT_DIR, REPO));
   report("this checkout is in settings.packages", local.length > 0 || (installedClone && competing.length === 1),
     local[0] ?? (installedClone ? competing[0] : "no exact local checkout registration"),
     `pi install ${REPO}`);

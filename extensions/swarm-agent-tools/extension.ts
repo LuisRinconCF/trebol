@@ -7,6 +7,8 @@ import { createSessionWakeup } from "../../.pi/lib/runtime/session-wakeup.ts";
 
 type Pi = any;
 const registrations = new WeakSet<object>();
+const fullRegistrations = new WeakSet<object>();
+const createManager = (pi: Pi, cwd?: string) => new AgentManager({ cwd: cwd ?? pi.getCwd?.() ?? process.cwd(), concurrency: 4, runner: createPiRunner(pi) });
 const methods: Record<string, keyof SwarmAgentTools> = {
   BackgroundTask: "backgroundTask", Subagent: "subagent", SubagentOutput: "taskOutput", TaskOutput: "taskOutput",
   Delegate: "delegate", DelegateOutput: "delegateOutput", multi_agent_wait: "multiWait", wait_for_agent: "waitForAgent",
@@ -22,7 +24,7 @@ const text = (r: ToolResult) => { if (r.isError) throw new PlainToolFailure(r.te
 export function registerSwarmAgentTools(pi: Pi, options: { manager?: AgentManager; cwd?: string } = {}): SwarmAgentTools {
   const host = pi as Record<PropertyKey, any>;
   if (host[AGENT_TOOLS_SYMBOL]) return host[AGENT_TOOLS_SYMBOL];
-  const manager = options.manager ?? host[AGENT_MANAGER_SYMBOL] ?? new AgentManager({ cwd: options.cwd ?? pi.getCwd?.() ?? process.cwd(), concurrency: 4, runner: createPiRunner(pi) });
+  const manager = options.manager ?? host[AGENT_MANAGER_SYMBOL] ?? createManager(pi, options.cwd);
   host[AGENT_MANAGER_SYMBOL] = manager;
   const logic = new SwarmAgentTools(manager, options.cwd ?? pi.getCwd?.() ?? process.cwd(), pi.getSessionId?.() ?? pi.sessionId ?? "");
   const wake = createSessionWakeup(pi);
@@ -57,7 +59,9 @@ export function registerSwarmAgentTools(pi: Pi, options: { manager?: AgentManage
 }
 
 export default function swarmAgentToolsExtension(pi: Pi): void {
-  const manager = new AgentManager({ cwd: pi.getCwd?.() ?? process.cwd(), concurrency: 4, runner: createPiRunner(pi) });
+  if (fullRegistrations.has(pi)) return;
+  fullRegistrations.add(pi);
+  const manager = pi[AGENT_MANAGER_SYMBOL] ?? createManager(pi);
   registerAgents(pi, manager);
   registerSwarmAgentTools(pi, { manager });
 }

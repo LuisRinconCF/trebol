@@ -405,7 +405,7 @@ the Pi adapter only for registration/presentation concerns.
 | Hook group / concern | Registration | Implementation / events |
 | --- | --- | --- |
 | Central hook state and ordering | `.pi/lib/runtime/hook-state.ts` | Registration, enablement, persistence, and visibility. |
-| Same-session hook correction | `.pi/lib/runtime/hook-correction.ts` | Shared session-keyed coordinator installed by `registerHook`. `tool_call` blocks gain same-step correction guidance and escalate to `terminate` after 3 attempts; pure tool-identity previews (autogen skill budget, task enforcement, bootstrap memory gate) may abort streaming early and dispatch one bounded correction via native `agent_settled` + `sendMessage(triggerTurn:true)`. User input, Escape/Ctrl+C, reload, and compaction invalidate pending corrections. Argument-dependent gates (disk hooks, structure guard, Bash classification) never preview early. |
+| Same-session hook correction | `.pi/lib/runtime/hook-correction.ts` | Authoritative tool_call denial with same-step feedback and bounded repeat escalation. No speculative abort or settlement wake. |
 | Prompt hook `packages/context/prompt` | `extensions/swarm-prompt/extension.ts` | `before_agent_start`; prompt/context assembly in `packages/context/prompt/src/index.ts` and `.pi/lib/context/swarm-context.ts`. |
 | Disk hooks `disk-hooks` | `extensions/swarm-disk-hooks/extension.ts` | Loads project/user hook config, executes bounded commands; maps tool/session/prompt/compact events. |
 | Structure guard `structure-guard` | `extensions/project-init/extension.ts` | `tool_call`; denies `write`/`edit`/`apply_patch` *creations* that violate `.project/structure.json` before the tool runs. Policy and classification in `.pi/lib/policy/project-structure.ts`, tool-argument extraction in `structure-guard.ts`. Existing paths are never blocked; `PI_SWARM_NO_STRUCTURE_GUARD=1` disables it like `PI_SWARM_NO_HOOKS`. |
@@ -879,3 +879,10 @@ and removes owner registrations on shutdown. It rejects missing session identity
 Ctrl+N adapter installation returns a release lease; last owner restores its
 patch, without clobbering later adapters. Tests: session-hook-dispatch and
  trebol-shortcut under `.pi/test/runtime/`, plus actual-host toggle smoke.
+
+PR 136 review dispositions and validation are recorded in
+`docs/architecture/pr-136-review.md`, including intentionally fail-closed session
+identity and preserved host-adapter constraints. Install source parsing shares
+one Git identity parser with doctor; migration preview covers top-level extension
+paths as well as package filters. Host lookup supports Windows npm shim layout
+with suffix tests; live Windows verification remains separate.
