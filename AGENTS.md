@@ -216,7 +216,7 @@ Use this section when a user names a tool, skill, or hook. Start at the public
 Pi extension, then follow its imported package/library. Keep the extension
 thin: execution/domain logic belongs in the package or `.pi/lib/`, policy
 belongs at the actual host/tool execution boundary, and rendering belongs in the extension/render bridge.
-`packages/policy/policy` is currently an unwired library, not the live authority.
+The former standalone policy/profile prototypes were removed: they had no live consumers.
 
 ### Tools by user-facing name
 
@@ -436,11 +436,9 @@ are separate seams and should remain decoupled.
 | `packages/tools/agents` | `packages/tools/agents/src/index.ts` | Agent identity, runner, cancellation, concurrency, or child sessions change. |
 | `packages/context/autogenskills` | `packages/context/autogenskills/src/index.ts` | Skill curation, locking, budgets, revision history, or review policy changes. |
 | `packages/tools/mcp` | `packages/tools/mcp/src/index.ts` | MCP manifests, transports, discovery, tool allowlists, or auth change. |
-| `packages/policy/policy` | `packages/policy/policy/src/policy.ts`, `packages/policy/policy/src/index.ts` | Authorization, workspace/mutation/network boundaries, or fail-closed rules change. |
 | `packages/runtime/runtime-contracts` | `packages/runtime/runtime-contracts/src/*.ts` | Control-plane, daemon, goal-loop, task, or stable runtime interfaces change. |
 | `packages/tools/schedule` | `packages/tools/schedule/src/{cron,scheduler,store,tools,types}.ts` | Scheduling semantics, persistence, or schedule tools change. |
 | `packages/context/skills` | `packages/context/skills/src/index.ts`, `packages/context/skills/builtins/**` | Skill loading, precedence, builtins, metadata, or disclosure changes. |
-| `packages/runtime/contract` | `packages/runtime/contract/src/index.ts` | Immutable profile, capability IDs, digest, or provenance contracts change. |
 | `packages/runtime/core` | `packages/runtime/core/src/index.ts` | Session identity, event journal, or runtime replacement semantics change. |
 | `packages/context/prompt` | `packages/context/prompt/src/index.ts`, `assets/*.txt`, `scripts/sync.mjs` | Canonical prompt assets or prompt provenance changes. |
 | `packages/tools/taskmanage` | `packages/tools/taskmanage/src/*.ts` | Task persistence, hooks, workflows, interaction, or authoritative task lifecycle changes. |
@@ -454,16 +452,15 @@ the package/extension boundary.
 
 - `packages/context/prompt` owns prompt precedence, workspace context, and non-secret
   provenance; chain `event.systemPrompt` instead of overwriting blindly.
-- `packages/policy/policy` is a standalone policy prototype with unit tests, not a wired
-  authorization boundary. Tool registration or a prompt instruction is not authorization.
+- Authorization belongs at the actual host/tool execution boundary. Tool registration
+  or a prompt instruction is not authorization.
 - `packages/tools/taskmanage`, `packages/tools/agents`, `history-search`, and `memory-history` own their
   respective durable workflows; use stable IDs and bounded outputs.
-- `packages/runtime/core` supplies the actively used tool renderer. Its identity/journal/
-  runtime classes currently have only test consumers; Pi owns native session lifecycle.
+- `packages/runtime/core` supplies the shared tool renderer. Pi owns session lifecycle;
+  the unused parallel identity/journal/runtime classes were removed.
 - `packages/context/skills`, `packages/context/autogenskills`, `packages/tools/mcp`, and `packages/tools/schedule` provide opt-in capability
   layers; do not make ambient discovery silently widen a closed profile.
-- `packages/runtime/contract` currently has only test consumers.
-  `packages/runtime/runtime-contracts` mixes active RPC/contracts with store/adapter
+- `packages/runtime/runtime-contracts` mixes active RPC/contracts with store/adapter
   implementations; audit imports before splitting it. Do not assume its barrel is type-only.
 - Import direction is fixed by who runs the code. `.pi/` imports package
   sources by relative path (`../../../packages/<layer>/<name>/src/index.ts`):

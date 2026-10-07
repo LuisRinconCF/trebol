@@ -19,13 +19,16 @@
 Repository source search (excluding generated, vendor and dependency trees) found
 only unit-test consumers of `createRuntimeProfile`, `SwarmRuntime`, and
 `MemoryEventJournal`, and no active imports of `packages/policy/policy`.
-These libraries remain for a separate removal/quarantine change; their documentation
-now explicitly states that they are not live enforcement/lifecycle boundaries.
+Removed these unused libraries and their self-only tests in the second slice.
+This removes no active enforcement: native host/tool boundaries remain unchanged.
+The root build no longer builds either deleted workspace.
 
 The renderer in `runtime/core` IS consumed; do not delete the entire package.
 `runtime-contracts` has active RPC consumers mixed with stores and adapters;
 splitting it requires symbol-level import and test migration, not a directory rename.
-Audit tracked `general-agent.ts/.js/.d.ts` resolution before removing siblings.
+The tracked `general-agent.js/.d.ts` siblings exactly matched compiler output;
+removed them from `src`. NodeNext builds emit them into `dist`, and source tests
+resolve the remaining TypeScript implementation.
 Extension-private `.pi/lib` relocation and flattening useful packages remain undone.
 
 ## Validation of the first slice
@@ -33,3 +36,8 @@ Extension-private `.pi/lib` relocation and flattening useful packages remain und
 Default and experimental TypeScript builds pass. Full suite: 874 passed, seven
 skipped. Real Pi: 53 entries load with zero errors; public surface parity and
 session toggle/reload pass. No live Postgres or Go execution is claimed.
+
+Second-slice validation: default and experimental builds pass; 862 tests pass,
+seven skipped. Twelve self-only tests were deleted with unused libraries (not
+skipped to hide failures). Real Pi load, public surface parity, native auto
+continuation and session toggle/reload pass. Net removal is roughly 500 lines.
