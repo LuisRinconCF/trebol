@@ -1,3 +1,4 @@
+// Intentionally invokes the implementation for isolated retrieval experiments; production index/toggle loading is covered by tools/install/check-load.mjs.
 #!/usr/bin/env node
 /** Real registered memory_history -> real isolated Pi child, five synthetic cases per strategy.
  * Run: ./node_modules/.bin/vite-node tools/experiments/memory-retrieval/live-five.mjs
@@ -80,14 +81,14 @@ async function runChild(command,args,opts,trace) {
 try {
   for (const method of wanted) {
     const root=join(sandbox,method);
-    mkdirSync(join(root,'.pi/extensions/40-state'),{recursive:true});
+    mkdirSync(join(root,'extensions/memory-history'),{recursive:true});
     mkdirSync(join(root,'packages/runtime/core/src'),{recursive:true});
     cpSync(join(repo,'.pi/lib'),join(root,'.pi/lib'),{recursive:true});
-    cpSync(join(repo,'.pi/extensions/40-state/memory-history.ts'),join(root,'.pi/extensions/40-state/memory-history.ts'));
+    cpSync(join(repo,'extensions/memory-history/extension.ts'),join(root,'extensions/memory-history/extension.ts'));
     cpSync(join(repo,'packages/runtime/core/src/tool-renderer.ts'),join(root,'packages/runtime/core/src/tool-renderer.ts'));
     const target=join(root,'.pi/lib/context/knowledge-pageindex.ts');
     if(method!=='control')writeFileSync(target,source.slice(0,start)+candidateCode(method)+source.slice(end));
-    const {default:extension}=await import(pathToFileURL(join(root,'.pi/extensions/40-state/memory-history.ts')));
+    const {default:extension}=await import(pathToFileURL(join(root,'extensions/memory-history/extension.ts')));
     const hooks=new Map(),tools=new Map(),trace={};
     extension({on:(name,fn)=>hooks.set(name,fn),registerTool:t=>tools.set(t.name,t),exec:(cmd,args,opts)=>runChild(cmd,args,opts,trace)});
     hooks.get('session_start')?.({}, {cwd:root,model:{provider:'clover-plexus',id:'luna'},sessionManager:{getEntries:()=>[],getSessionFile:()=>join(root,'session.jsonl')}});

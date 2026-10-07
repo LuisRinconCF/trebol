@@ -1,0 +1,2910 @@
+{
+  "records": [
+    {
+      "path": ".pi/extensions/trebol-loader.ts",
+      "tools": [],
+      "commands": [
+        "trebol-toggle"
+      ],
+      "shortcuts": [
+        "ctrl+n"
+      ],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "session_shutdown",
+          "count": 1
+        },
+        {
+          "name": "session_start",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/00-runtime/.trebol-guards/00-pi-tmux-resurrection.ts",
+      "tools": [],
+      "commands": [],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "session_start",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/00-runtime/.trebol-guards/01-cache-telemetry.ts",
+      "tools": [],
+      "commands": [
+        "cache"
+      ],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "after_provider_response",
+          "count": 1
+        },
+        {
+          "name": "before_provider_request",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/00-runtime/.trebol-guards/02-swarm-update.ts",
+      "tools": [],
+      "commands": [
+        "trebol-update"
+      ],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "session_shutdown",
+          "count": 1
+        },
+        {
+          "name": "session_start",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/00-runtime/.trebol-guards/03-bootstrap.ts",
+      "tools": [
+        {
+          "name": "bootstrap",
+          "description": "Gather task-relevant memory, load selected skills, and propose a task plan. Loads at most two relevant skills before planning. Follow returned loadedSkills instructions without reloading them; verify task proposals against the repository before implementation. Tasks are always established and reconciled; an existing focused task is reused instead of creating another graph.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "task"
+            ],
+            "properties": {
+              "task": {
+                "type": "string"
+              },
+              "replanKey": {
+                "type": "string",
+                "description": "Explicit scope-change identifier for re-decomposition. Reuse the same key on retries; a new key reconciles the live task graph again."
+              },
+              "commitTasks": {
+                "type": "boolean",
+                "description": "Deprecated; bootstrap always establishes and reconciles tasks."
+              }
+            }
+          }
+        }
+      ],
+      "commands": [
+        "bootstrap",
+        "mem"
+      ],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "agent_settled",
+          "count": 1
+        },
+        {
+          "name": "before_agent_start",
+          "count": 1
+        },
+        {
+          "name": "input",
+          "count": 1
+        },
+        {
+          "name": "message_end",
+          "count": 1
+        },
+        {
+          "name": "message_update",
+          "count": 1
+        },
+        {
+          "name": "session_before_compact",
+          "count": 1
+        },
+        {
+          "name": "session_shutdown",
+          "count": 2
+        },
+        {
+          "name": "session_start",
+          "count": 4
+        },
+        {
+          "name": "tool_call",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/00-runtime/.trebol-guards/04-hooks.ts",
+      "tools": [],
+      "commands": [
+        "hooks"
+      ],
+      "shortcuts": [
+        "ctrl+h"
+      ],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "session_start",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/00-runtime/.trebol-guards/05-swarm-runtime.ts",
+      "tools": [
+        {
+          "name": "Agent",
+          "description": "Start a child agent in the inherited session context.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "task"
+            ],
+            "properties": {
+              "task": {
+                "type": "string"
+              },
+              "profile": {
+                "type": "string"
+              },
+              "provider": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "background": {
+                "type": "boolean"
+              },
+              "worktree": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        {
+          "name": "AgentControl",
+          "description": "Wait, cancel, or steer a background agent.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "id",
+              "action"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "action": {
+                "type": "string",
+                "enum": [
+                  "wait",
+                  "cancel",
+                  "steer"
+                ]
+              },
+              "instruction": {
+                "type": "string"
+              },
+              "timeoutMs": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        {
+          "name": "daemon_status",
+          "description": "Show production daemon configuration status.",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        {
+          "name": "goal_get",
+          "description": "Get a goal from the authoritative control plane.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        {
+          "name": "run_cancel",
+          "description": "Cancel a run through the authoritative control plane.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        {
+          "name": "run_create",
+          "description": "Create a task run through the authoritative control plane.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "taskId"
+            ],
+            "properties": {
+              "taskId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotencyKey": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "name": "run_get",
+          "description": "Get a run from the authoritative control plane.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        {
+          "name": "run_status",
+          "description": "Get run status from the authoritative control plane.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        {
+          "name": "task_cancel",
+          "description": "Cancel a task through the authoritative control plane.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        {
+          "name": "task_create",
+          "description": "Create a task through the authoritative control plane.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "prompt"
+            ],
+            "properties": {
+              "prompt": {
+                "type": "string"
+              },
+              "goalId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotencyKey": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "name": "task_get",
+          "description": "Get a task from the authoritative control plane.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        {
+          "name": "task_status",
+          "description": "Get task status from the authoritative control plane.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ],
+      "commands": [
+        "swarm-mcp",
+        "swarm-runtime"
+      ],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "agent_settled",
+          "count": 1
+        },
+        {
+          "name": "before_agent_start",
+          "count": 1
+        },
+        {
+          "name": "input",
+          "count": 1
+        },
+        {
+          "name": "message_end",
+          "count": 1
+        },
+        {
+          "name": "message_update",
+          "count": 1
+        },
+        {
+          "name": "session_before_compact",
+          "count": 1
+        },
+        {
+          "name": "session_shutdown",
+          "count": 2
+        },
+        {
+          "name": "session_start",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/00-runtime/.trebol-guards/06-swarm-transport-parity.ts",
+      "tools": [],
+      "commands": [],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "before_agent_start",
+          "count": 1
+        },
+        {
+          "name": "before_provider_request",
+          "count": 1
+        },
+        {
+          "name": "context",
+          "count": 1
+        },
+        {
+          "name": "model_select",
+          "count": 1
+        },
+        {
+          "name": "session_start",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/10-context/.trebol-guards/00-autogenskills.ts",
+      "tools": [
+        {
+          "name": "Skill",
+          "description": "Execute a skill within the main conversation.\n\nWhen users ask you to perform tasks, check if any of the available skills match.\nWhen a skill matches the user's request, this is a BLOCKING REQUIREMENT: invoke\nthe relevant Skill tool BEFORE generating any other response about the task.\n\nA successful Skill invocation (not SkillManage) refills the skill tool-call budget.\n\nAvailable skills are listed in system-reminder messages in the conversation.\n\nParameters:\n  - skill: The name of the skill to invoke\n  - args: Optional arguments to pass to the skill (space-separated)\n\nThe skill's instructions will be returned as the tool result. Follow them carefully.",
+          "parameters": {
+            "additionalProperties": false,
+            "properties": {
+              "args": {
+                "description": "Optional arguments to pass to the skill. Space-separated values that replace {{arg}} placeholders in the skill content.",
+                "type": "string"
+              },
+              "skill": {
+                "description": "The name of the skill to invoke. Available skills are listed in system-reminder messages.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "skill"
+            ],
+            "type": "object"
+          }
+        },
+        {
+          "name": "SkillManage",
+          "description": "Create or manage autogenerated skills. SkillManage does not invoke a skill or refill the skill tool-call budget. After creating a skill, invoke it with Skill to refill; a no-mutation review does not refill.\n\nThe target library is class-level: prefer enriching an existing umbrella skill\nover creating a narrow one-session skill. Preserve specific context in a labeled\nSKILL.md subsection or a references/, templates/, scripts/, or assets/ support file.\n\nActions:\n  - create: Create a new class-level umbrella only when no loaded or existing skill covers the workflow. Never overwrite an existing skill.\n  - patch: Patch an existing skill immediately when you find it outdated, incomplete, or wrong — don't wait to be asked\n  - write_file: Add narrow but valuable context under an existing umbrella skill\n  - absorb_files: Carry support files from one skill package into another byte-for-byte. Use this when merging, NOT read_file+write_file.\n  - read_file: Read one support file from an existing skill package\n  - review: Record a completed review with no mutation when nothing reusable was learned\n  - view: Load a skill's full instructions. When you view a skill, follow its instructions for the current task. If the skill needs updating, patch it immediately.\n  - history: List immutable package revisions, newest first.\n  - undo: Append a revert revision restoring a prior package state.\n  - list: See all available skills with name, version, and description\n  - archive: Recoverably archive a skill. Supply absorbed_into after consolidation, or pruning_reason when no knowledge was retained.\n\nParameters:\n  - action: \"create\" | \"patch\" | \"write_file\" | \"absorb_files\" | \"read_file\" | \"review\" | \"view\" | \"history\" | \"undo\" | \"list\" | \"archive\"\n  - name: skill identifier matching ^[a-z0-9]+(-[a-z0-9]+)*$ (max 64; \"archive\" and Windows device aliases are reserved)\n  - description: what the skill does (create, patch)\n  - instructions: the full skill body (create, patch; configured policy may impose a minimum)\n  - append: append patch instructions instead of replacing them\n  - tags: comma-separated discovery tags (optional, create)\n  - category: organization category (optional, create)\n  - file_path/file_content: support file path and content (write_file)\n  - from_skill: skill whose support files are being carried across (absorb_files)\n  - file_paths: comma-separated support paths to carry; omit to carry every support file (absorb_files)\n  - absorbed_into/pruning_reason: archive provenance; one is required\n  - dropped_files: comma-separated support paths you deliberately decline to carry, with archive; each must be justified in pruning_reason or the archive is refused\n  - review_reason: why no skill mutation is appropriate (review)\n  - offset/limit: optional Unicode character range for paged view output\n  - expected_revision: revision returned by view; required for existing-skill mutations\n  - revision: optional history revision to restore (undo defaults to the prior revision)\n\nabsorb_files copies bytes on disk. Use it to preserve bytes and revision tracking when moving a script,\nimage, or other binary artifact between packages: read_file + write_file routes\nthe content through the model, which silently rewrites text and cannot represent\nbinary at all. archive with absorbed_into is refused when the source still has\nsupport files the umbrella does not hold byte-for-byte.\n\nReturns the skill path (create), updated skill info (patch), full skill content (view),\nor a listing of all skills (list).",
+          "parameters": {
+            "properties": {
+              "absorbed_into": {
+                "description": "Umbrella skill that absorbed this skill before archive",
+                "type": "string"
+              },
+              "action": {
+                "description": "Action to perform",
+                "enum": [
+                  "create",
+                  "patch",
+                  "write_file",
+                  "absorb_files",
+                  "read_file",
+                  "review",
+                  "view",
+                  "history",
+                  "undo",
+                  "list",
+                  "archive"
+                ],
+                "type": "string"
+              },
+              "append": {
+                "description": "Append patch instructions instead of replacing them",
+                "type": "boolean"
+              },
+              "category": {
+                "description": "Organization category (optional)",
+                "type": "string"
+              },
+              "description": {
+                "description": "What the skill does",
+                "type": "string"
+              },
+              "dropped_files": {
+                "description": "Comma-separated support paths deliberately not carried forward; requires pruning_reason to justify the loss",
+                "type": "string"
+              },
+              "expected_revision": {
+                "description": "Current revision returned by view; required for existing-skill mutations",
+                "type": "string"
+              },
+              "file_content": {
+                "description": "Support file content",
+                "type": "string"
+              },
+              "file_path": {
+                "description": "Relative support path under references/, templates/, scripts/, or assets/",
+                "type": "string"
+              },
+              "file_paths": {
+                "description": "Comma-separated support paths to carry; omit to carry every support file (absorb_files)",
+                "type": "string"
+              },
+              "from_skill": {
+                "description": "Source skill whose support files are copied into 'name' (absorb_files)",
+                "maxLength": 64,
+                "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+                "type": "string"
+              },
+              "instructions": {
+                "description": "Full skill body; configured policy may impose a minimum",
+                "type": "string"
+              },
+              "limit": {
+                "description": "For view: maximum Unicode characters returned. For history: maximum revisions returned, newest first (full history when omitted).",
+                "minimum": 1,
+                "type": "integer"
+              },
+              "name": {
+                "description": "Skill identifier; archive and Windows device aliases are reserved",
+                "maxLength": 64,
+                "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+                "type": "string"
+              },
+              "offset": {
+                "description": "Unicode character offset for paged view output",
+                "minimum": 0,
+                "type": "integer"
+              },
+              "pruning_reason": {
+                "description": "Why archive is safe when there is no absorption target",
+                "type": "string"
+              },
+              "review_reason": {
+                "description": "Why the completed review needs no skill mutation",
+                "type": "string"
+              },
+              "revision": {
+                "description": "Revision to restore (undo; defaults to prior revision)",
+                "type": "string"
+              },
+              "tags": {
+                "description": "Comma-separated tags (optional)",
+                "type": "string"
+              }
+            },
+            "required": [
+              "action"
+            ],
+            "type": "object"
+          }
+        }
+      ],
+      "commands": [
+        "curator",
+        "swarm-autogen"
+      ],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "agent_settled",
+          "count": 2
+        },
+        {
+          "name": "before_agent_start",
+          "count": 1
+        },
+        {
+          "name": "input",
+          "count": 2
+        },
+        {
+          "name": "message_end",
+          "count": 2
+        },
+        {
+          "name": "message_update",
+          "count": 2
+        },
+        {
+          "name": "session_before_compact",
+          "count": 2
+        },
+        {
+          "name": "session_compact",
+          "count": 1
+        },
+        {
+          "name": "session_shutdown",
+          "count": 3
+        },
+        {
+          "name": "session_start",
+          "count": 5
+        },
+        {
+          "name": "session_switch",
+          "count": 1
+        },
+        {
+          "name": "tool_call",
+          "count": 1
+        },
+        {
+          "name": "tool_result",
+          "count": 1
+        },
+        {
+          "name": "turn_end",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/10-context/.trebol-guards/01-mermaid-response.ts",
+      "tools": [],
+      "commands": [],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "input",
+          "count": 1
+        },
+        {
+          "name": "message_end",
+          "count": 1
+        },
+        {
+          "name": "session_start",
+          "count": 1
+        },
+        {
+          "name": "session_switch",
+          "count": 1
+        },
+        {
+          "name": "turn_end",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/10-context/.trebol-guards/02-prompt-context-configure.ts",
+      "tools": [],
+      "commands": [
+        "configure"
+      ],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": []
+    },
+    {
+      "path": ".pi/extensions/10-context/.trebol-guards/03-swarm-plan-mode.ts",
+      "tools": [
+        {
+          "name": "enter_plan_mode",
+          "description": "Enter Plan Mode to explore, resolve user-dependent decisions, write a plan, and submit it for approval. Plan Mode does not change normal permissions.",
+          "parameters": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "exit_plan_mode",
+          "description": "Submit a workspace-local Markdown plan for approval. Use plan_file or inline plan, never both. Rejection returns feedback and keeps Plan Mode active.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "plan": {
+                "type": "string",
+                "description": "Complete Markdown plan; mutually exclusive with plan_file."
+              },
+              "plan_file": {
+                "type": "string",
+                "description": "Workspace-local Markdown/text path; mutually exclusive with plan."
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "commands": [
+        "plan-mode"
+      ],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "session_start",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/10-context/.trebol-guards/04-swarm-prompt.ts",
+      "tools": [],
+      "commands": [],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "agent_settled",
+          "count": 1
+        },
+        {
+          "name": "before_agent_start",
+          "count": 1
+        },
+        {
+          "name": "input",
+          "count": 1
+        },
+        {
+          "name": "message_end",
+          "count": 1
+        },
+        {
+          "name": "message_update",
+          "count": 1
+        },
+        {
+          "name": "session_before_compact",
+          "count": 1
+        },
+        {
+          "name": "session_shutdown",
+          "count": 1
+        },
+        {
+          "name": "session_start",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/10-context/.trebol-guards/05-swarm-auto.ts",
+      "tools": [],
+      "commands": [
+        "auto"
+      ],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "agent_end",
+          "count": 1
+        },
+        {
+          "name": "agent_settled",
+          "count": 1
+        },
+        {
+          "name": "agent_start",
+          "count": 1
+        },
+        {
+          "name": "before_agent_start",
+          "count": 1
+        },
+        {
+          "name": "input",
+          "count": 1
+        },
+        {
+          "name": "session_before_compact",
+          "count": 1
+        },
+        {
+          "name": "session_before_fork",
+          "count": 1
+        },
+        {
+          "name": "session_before_switch",
+          "count": 1
+        },
+        {
+          "name": "session_before_tree",
+          "count": 1
+        },
+        {
+          "name": "session_shutdown",
+          "count": 1
+        },
+        {
+          "name": "session_start",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/10-context/.trebol-guards/06-swarm-skills.ts",
+      "tools": [
+        {
+          "name": "skill_view",
+          "description": "Load a skill's SKILL.md or one of its support files.",
+          "parameters": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "file_path": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "name": "skills_list",
+          "description": "List available skills with metadata. Use skill_view to load one.",
+          "parameters": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": false
+          }
+        }
+      ],
+      "commands": [
+        "skill",
+        "swarm-skills"
+      ],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "session_start",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/10-context/.trebol-guards/07-swarm-thinking.ts",
+      "tools": [],
+      "commands": [
+        "swarm-thinking"
+      ],
+      "shortcuts": [
+        "ctrl+alt+shift+t"
+      ],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": []
+    },
+    {
+      "path": ".pi/extensions/10-context/.trebol-guards/08-system-inspector.ts",
+      "tools": [],
+      "commands": [
+        "system"
+      ],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "before_agent_start",
+          "count": 1
+        },
+        {
+          "name": "session_start",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/10-context/.trebol-guards/09-system-prompts.ts",
+      "tools": [],
+      "commands": [
+        "sp"
+      ],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": []
+    },
+    {
+      "path": ".pi/extensions/10-context/.trebol-guards/10-swarm-context.ts",
+      "tools": [
+        {
+          "name": "context_delete",
+          "description": "Delete an indexed context source by stable ID; deletion is persisted as a tombstone.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "operation",
+              "sourceId"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "operation": {
+                "type": "string",
+                "enum": [
+                  "delete"
+                ]
+              },
+              "sourceId": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "name": "context_index",
+          "description": "Index an explicit Markdown context source, either inline text or a workspace-relative path.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "operation"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "operation": {
+                "type": "string",
+                "enum": [
+                  "index"
+                ]
+              },
+              "name": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "namespace": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "name": "context_inspect",
+          "description": "Inspect indexed context sources, scope, hashes, timestamps, and staleness.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "operation"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "operation": {
+                "type": "string",
+                "enum": [
+                  "inspect"
+                ]
+              },
+              "namespace": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "name": "context_outline",
+          "description": "List indexed section titles, nodeIds, and line numbers without body text. Call before context_read.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "operation"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "operation": {
+                "type": "string",
+                "enum": [
+                  "outline"
+                ]
+              },
+              "sourceId": {
+                "type": "string"
+              },
+              "namespace": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "name": "context_read",
+          "description": "Read bounded, cited body text by sourceId and nodeIds. Discover IDs with context_outline, or use known citations directly.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "operation",
+              "sourceId",
+              "nodeIds"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "operation": {
+                "type": "string",
+                "enum": [
+                  "read"
+                ]
+              },
+              "sourceId": {
+                "type": "string"
+              },
+              "nodeIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 12
+              },
+              "namespace": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "name": "context_reindex",
+          "description": "Re-index a source from its backing file after it changed on disk, keeping its id and dropping stale summaries.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "operation",
+              "sourceId"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "operation": {
+                "type": "string",
+                "enum": [
+                  "reindex"
+                ]
+              },
+              "sourceId": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "name": "context_remember",
+          "description": "Capture indexed knowledge with evidence references; no file needed. Memory records what is known: project architecture, domain facts, terminology, decisions and rationale, constraints, preferences, and relevant ongoing context. A project's established process is knowledge about that project. Reusable instructions for how an agent should investigate, implement, debug, or verify belong in skills, not memory. Separate factual context from procedural advice when an observation contains both. Preserve evidence, uncertainty, and freshness; later corrections may invalidate earlier claims. Do not treat an agent's success claim as verified fact. This index currently uses namespace/workspace/session scope; it does not promote notes to repository or global memory.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "operation",
+              "note"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "operation": {
+                "type": "string",
+                "enum": [
+                  "remember"
+                ]
+              },
+              "note": {
+                "type": "string"
+              },
+              "topic": {
+                "type": "string"
+              },
+              "namespace": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "name": "context_search",
+          "description": "Locate and cite the indexed sections that bear on a question. A retrieval agent walks the section outline and returns cited excerpts — evidence, never a synthesized answer.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "operation",
+              "query"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "operation": {
+                "type": "string",
+                "enum": [
+                  "search"
+                ]
+              },
+              "query": {
+                "type": "string"
+              },
+              "namespace": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ],
+      "commands": [
+        "swarm-context"
+      ],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "session_shutdown",
+          "count": 1
+        },
+        {
+          "name": "session_start",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/10-context/.trebol-guards/11-mandatory-compaction.ts",
+      "tools": [],
+      "commands": [],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "turn_end",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/20-policy/.trebol-guards/00-swarm-disk-hooks.ts",
+      "tools": [],
+      "commands": [
+        "swarm-disk-hooks"
+      ],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "agent_settled",
+          "count": 1
+        },
+        {
+          "name": "before_agent_start",
+          "count": 1
+        },
+        {
+          "name": "input",
+          "count": 1
+        },
+        {
+          "name": "message_end",
+          "count": 1
+        },
+        {
+          "name": "message_update",
+          "count": 1
+        },
+        {
+          "name": "session_before_compact",
+          "count": 2
+        },
+        {
+          "name": "session_shutdown",
+          "count": 2
+        },
+        {
+          "name": "session_start",
+          "count": 2
+        },
+        {
+          "name": "tool_call",
+          "count": 1
+        },
+        {
+          "name": "tool_result",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/20-policy/.trebol-guards/01-project-init.ts",
+      "tools": [
+        {
+          "name": "project_init",
+          "description": "Inspect, plan, or apply a structured project scaffold. Call action=\"inspect\" to see what exists, action=\"plan\" to preview the exact files, and action=\"apply\" only after the user approves the plan. Writing project scaffold files with write/edit/apply_patch instead of this tool is incorrect.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": [
+                  "inspect",
+                  "plan",
+                  "apply"
+                ],
+                "description": "inspect reports what already exists; plan previews the exact file list without writing; apply writes the files. Always plan and get user approval before apply."
+              },
+              "target": {
+                "type": "string",
+                "description": "Optional project directory relative to the workspace root. Defaults to the workspace root. Absolute paths and paths outside the workspace are rejected."
+              },
+              "name": {
+                "type": "string",
+                "description": "Project name in kebab-case. Required for plan and apply."
+              },
+              "summary": {
+                "type": "string",
+                "description": "One-line description of what the project does. Required for plan and apply."
+              },
+              "tier": {
+                "type": "string",
+                "enum": [
+                  "demo",
+                  "product",
+                  "platform"
+                ],
+                "description": "demo = throwaway/spike, minimum structure. product = maintained, adds agent guide and changelog. platform = long-lived, adds contributing and security policy."
+              },
+              "language": {
+                "type": "string",
+                "description": "Primary implementation language, lowercase."
+              },
+              "envVars": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Environment variable NAMES only, UPPER_SNAKE_CASE. Never pass values or secrets."
+              },
+              "iac": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "docker",
+                  "terraform"
+                ],
+                "default": "none"
+              },
+              "ci": {
+                "type": "boolean",
+                "default": false,
+                "description": "Generate a CI workflow skeleton."
+              },
+              "knowledge": {
+                "type": "boolean",
+                "default": false,
+                "description": "Generate a knowledge/ directory for durable domain notes."
+              }
+            },
+            "required": [
+              "action"
+            ]
+          }
+        }
+      ],
+      "commands": [
+        "init"
+      ],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "agent_settled",
+          "count": 1
+        },
+        {
+          "name": "input",
+          "count": 1
+        },
+        {
+          "name": "message_end",
+          "count": 1
+        },
+        {
+          "name": "message_update",
+          "count": 1
+        },
+        {
+          "name": "session_before_compact",
+          "count": 1
+        },
+        {
+          "name": "session_shutdown",
+          "count": 1
+        },
+        {
+          "name": "session_start",
+          "count": 1
+        },
+        {
+          "name": "tool_call",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/30-tools/.trebol-guards/00-annoyed__index.ts",
+      "tools": [
+        {
+          "name": "annoyed",
+          "description": "Publish an actionable product-friction report after one isolated tool-less ownership consultation. Trebol-owned harness defects route to cloverinternational/trebol; project defects route only to a host-verified active-project GitHub repository. Upstream, non-actionable, uncertain, missing-remote, and judge-failure submissions go to explicit Trebol triage. The transcript remains local and is never published. Cancellation prevents starting another GitHub write; a previously dispatched request may have succeeded and requires receipt reconciliation. Use once with concrete observed/expected behavior, bounded non-secret evidence and objective acceptance tests. Do not turn automatic failure nudges into reports of every failure.",
+          "parameters": {
+            "properties": {
+              "acceptance_tests": {
+                "description": "Objective tests that a fix must pass",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "category": {
+                "description": "Defect class: hook_false_positive, tool_failure, inefficiency, misleading_error, missing_capability, or other",
+                "type": "string"
+              },
+              "evidence": {
+                "description": "Bounded, non-secret evidence such as the tool, error class, and reproduction shape",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "expected": {
+                "description": "What should have happened instead",
+                "type": "string"
+              },
+              "issue": {
+                "description": "A brief description of the issue, bug, inefficiency, or frustration",
+                "type": "string"
+              },
+              "observed": {
+                "description": "What concretely happened; state the mechanism, not a vibe",
+                "type": "string"
+              },
+              "severity": {
+                "description": "Severity: low, medium, or high",
+                "type": "string"
+              }
+            },
+            "required": [
+              "issue"
+            ],
+            "type": "object"
+          }
+        }
+      ],
+      "commands": [
+        "annoyed"
+      ],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "session_shutdown",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/30-tools/.trebol-guards/01-control-task-tools.ts",
+      "tools": [],
+      "commands": [],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": []
+    },
+    {
+      "path": ".pi/extensions/30-tools/.trebol-guards/02-history-search.ts",
+      "tools": [
+        {
+          "name": "history_search",
+          "description": "Search prior Pi conversations and stream-search huge JSONL datasets. Read-only, bounded, and redacted. Search first, then read a matching session.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "operation"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "operation": {
+                "type": "string",
+                "enum": [
+                  "list",
+                  "search",
+                  "read",
+                  "json_search"
+                ]
+              },
+              "query": {
+                "type": "string"
+              },
+              "session": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string"
+              },
+              "cwd": {
+                "type": "string"
+              },
+              "since": {
+                "type": "string"
+              },
+              "until": {
+                "type": "string"
+              },
+              "root": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "limit": {
+                "type": "number"
+              },
+              "offset": {
+                "type": "number"
+              },
+              "recordLimit": {
+                "type": "number"
+              },
+              "maxCharacters": {
+                "type": "number"
+              },
+              "maxBytes": {
+                "type": "number"
+              },
+              "includeValues": {
+                "type": "boolean"
+              },
+              "includeToolResults": {
+                "type": "boolean"
+              },
+              "includeCurrent": {
+                "type": "boolean"
+              },
+              "scanLimit": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      ],
+      "commands": [],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "session_start",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/30-tools/.trebol-guards/03-ask-user__index.ts",
+      "tools": [
+        {
+          "name": "ask_user_question",
+          "description": "Ask the user a question with optional multiple-choice answers. Use this to gather information interactively. Ask exactly one focused question per call. Before calling, gather context with tools (read/web/ref) and pass a short summary via the context field.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "question": {
+                "type": "string",
+                "description": "The question to ask the user"
+              },
+              "header": {
+                "type": "string",
+                "description": "Short dialog heading"
+              },
+              "kind": {
+                "type": "string",
+                "description": "Compatibility alias for question type"
+              },
+              "questions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "prompt": {
+                      "type": "string",
+                      "description": "Question text"
+                    },
+                    "question": {
+                      "type": "string",
+                      "description": "Alias for prompt"
+                    }
+                  }
+                },
+                "description": "Optional questionnaire fallback"
+              },
+              "choices": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "Choice label"
+                }
+              },
+              "context": {
+                "type": "string",
+                "description": "Relevant context to show before the question (summary of findings)"
+              },
+              "options": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "title"
+                  ],
+                  "properties": {
+                    "title": {
+                      "type": "string",
+                      "description": "Short title for this option"
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "Longer description explaining this option"
+                    }
+                  }
+                },
+                "description": "List of options for the user to choose from"
+              },
+              "allowMultiple": {
+                "type": "boolean",
+                "description": "Allow selecting multiple options. Default: false"
+              },
+              "allowFreeform": {
+                "type": "boolean",
+                "description": "Add a freeform text option. Default: true"
+              },
+              "allowComment": {
+                "type": "boolean",
+                "description": "Collect an optional comment after selecting one or more options. Default: PI_ASK_USER_ALLOW_COMMENT env var if set, otherwise false."
+              },
+              "displayMode": {
+                "type": "string",
+                "enum": [
+                  "overlay",
+                  "inline"
+                ],
+                "description": "UI rendering mode. 'overlay' shows a centered modal, 'inline' renders in-place. Default: PI_ASK_USER_DISPLAY_MODE env var if set, otherwise 'overlay'. Omit to respect the user's configured preference."
+              },
+              "singleSelectLayout": {
+                "type": "string",
+                "enum": [
+                  "auto",
+                  "list"
+                ],
+                "description": "Single-select layout. 'auto' uses a details pane on wide terminals; 'list' always keeps descriptions below options. Default: PI_ASK_USER_SINGLE_SELECT_LAYOUT if set, otherwise 'auto'."
+              },
+              "contextExpanded": {
+                "type": "boolean",
+                "description": "Start with oversized context expanded instead of collapsed behind a one-line summary. Default: PI_ASK_USER_CONTEXT_EXPANDED env var if set, otherwise false."
+              },
+              "overlayToggleKey": {
+                "type": "string",
+                "description": "Shortcut for hiding/showing the overlay popup (overlay mode only), e.g. 'alt+o' or 'ctrl+shift+h'. Pass 'off' to disable. Default: PI_ASK_USER_OVERLAY_TOGGLE_KEY env var if set, otherwise 'alt+o'."
+              },
+              "commentToggleKey": {
+                "type": "string",
+                "description": "Shortcut for toggling the optional comment/extra-context row when allowComment is true, e.g. 'ctrl+g'. Pass 'off' to disable. Default: PI_ASK_USER_COMMENT_TOGGLE_KEY env var if set, otherwise 'ctrl+g'."
+              },
+              "timeout": {
+                "type": "number",
+                "description": "Deprecated and ignored. Questions wait indefinitely until answered or explicitly cancelled."
+              }
+            }
+          }
+        }
+      ],
+      "commands": [],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": []
+    },
+    {
+      "path": ".pi/extensions/30-tools/.trebol-guards/04-research-tools.ts",
+      "tools": [
+        {
+          "name": "browser_get_page",
+          "description": "Read a page from an explicitly configured browser automation bridge. Never performs navigation or mutation.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "url"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "url": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "name": "deepwiki",
+          "description": "Fetch a DeepWiki source through its configured HTTPS endpoint; credentials are loaded from the environment only.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "url"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "url": {
+                "type": "string"
+              },
+              "question": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "name": "web_fetch",
+          "description": "Fetch one HTTPS source with bounded bytes, timeout, network policy, and content provenance.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "url"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "url": {
+                "type": "string"
+              },
+              "allowed_hosts": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 20
+              },
+              "blocked_hosts": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 20
+              },
+              "max_bytes": {
+                "type": "integer",
+                "minimum": 1024,
+                "maximum": 10000000
+              },
+              "timeout_ms": {
+                "type": "integer",
+                "minimum": 1000,
+                "maximum": 60000
+              }
+            }
+          }
+        }
+      ],
+      "commands": [],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": []
+    },
+    {
+      "path": ".pi/extensions/30-tools/.trebol-guards/05-swarm-monitor.ts",
+      "tools": [
+        {
+          "name": "monitor_agent",
+          "description": "Monitor any long-running target using periodic agent checks. Targets may be GitHub PRs, deployments, tickets, files, APIs, inboxes, jobs, or anything the session can inspect. Actions never happen unless explicitly included in the monitor action and permitted by normal policy.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "action"
+            ],
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": [
+                  "create",
+                  "list",
+                  "pause",
+                  "resume",
+                  "cancel",
+                  "check"
+                ]
+              },
+              "id": {
+                "type": "string"
+              },
+              "target": {
+                "type": "string"
+              },
+              "check": {
+                "type": "string"
+              },
+              "interval": {
+                "type": "string"
+              },
+              "max_attempts": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 5
+              },
+              "follow_up": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ],
+      "commands": [],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "agent_end",
+          "count": 1
+        },
+        {
+          "name": "agent_settled",
+          "count": 1
+        },
+        {
+          "name": "agent_start",
+          "count": 1
+        },
+        {
+          "name": "session_before_compact",
+          "count": 1
+        },
+        {
+          "name": "session_shutdown",
+          "count": 2
+        },
+        {
+          "name": "session_start",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/30-tools/.trebol-guards/06-swarm-websearch.ts",
+      "tools": [],
+      "commands": [
+        "swarm-websearch"
+      ],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "session_shutdown",
+          "count": 1
+        },
+        {
+          "name": "session_start",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/30-tools/.trebol-guards/07-swarm-goal.ts",
+      "tools": [
+        {
+          "name": "scheduler",
+          "description": "Wake this same Pi session after a delay, or repeatedly on an interval or five-field cron. Actions: create, list, cancel. Create requires prompt and exactly one of delay (e.g. 15s, 5m), interval (recurring), or cron (recurring). Session-only; cancelled on shutdown/reload. Recurring schedules expire after seven days. After creating, end your turn; no polling is needed.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "action"
+            ],
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": [
+                  "create",
+                  "list",
+                  "cancel"
+                ]
+              },
+              "id": {
+                "type": "string"
+              },
+              "prompt": {
+                "type": "string"
+              },
+              "delay": {
+                "type": "string"
+              },
+              "interval": {
+                "type": "string"
+              },
+              "cron": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ],
+      "commands": [
+        "goal",
+        "loop"
+      ],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "agent_end",
+          "count": 1
+        },
+        {
+          "name": "agent_settled",
+          "count": 1
+        },
+        {
+          "name": "agent_start",
+          "count": 1
+        },
+        {
+          "name": "session_before_compact",
+          "count": 1
+        },
+        {
+          "name": "session_shutdown",
+          "count": 2
+        },
+        {
+          "name": "session_start",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/30-tools/.trebol-guards/08-swarm-agent-tools.ts",
+      "tools": [
+        {
+          "name": "BackgroundTask",
+          "description": "Launch a background agent for long-running work that shouldn't block the conversation. Use for large-scale analysis, multi-file refactoring, or operations that may take minutes. Returns immediately with an agent_id and output_file path. Use TaskOutput(agent_id, action='result') to retrieve output, or Read the output_file directly for a live view while running. Do not duplicate the agent's work on the same files while it is running.",
+          "parameters": {
+            "type": "object"
+          }
+        },
+        {
+          "name": "Delegate",
+          "description": "Spawn a focused agent that can ask the parent clarifying questions. Use DelegateOutput to poll, answer questions, check status, and retrieve the result; use Subagent instead for fully autonomous work.",
+          "parameters": {
+            "type": "object"
+          }
+        },
+        {
+          "name": "DelegateOutput",
+          "description": "Interact with an active delegate agent spawned by Delegate().\n\nActions:\n  \"status\"  — Check current state, pending questions, and task progress.\n  \"poll\"    — Wait up to 10s for a question from the delegate or completion.\n              Use this to efficiently wait for questions without busy-looping.\n  \"answer\"  — Send your answer to a pending question. The delegate resumes immediately.\n  \"result\"  — Read the delegate's final output. Use offset for incremental reads.\n  \"cancel\"  — Cancel a running delegate.\n\nTypical polling loop:\n  while true:\n    out = DelegateOutput(agent_id, \"poll\")\n    if out has question → DelegateOutput(agent_id, \"answer\", \"your answer\")\n    if out.status == \"done\" → DelegateOutput(agent_id, \"result\") and break\n\nPass offset from a previous 'result' call to read only new content.",
+          "parameters": {
+            "type": "object"
+          }
+        },
+        {
+          "name": "multi_agent_wait",
+          "description": "Wait for multiple background or task agents to complete before continuing. Blocks execution until all specified agents finish (completed, failed, or cancelled). \n\nThis tool is designed for coordinating parallel agent workflows where the orchestrator needs to:\n- Spawn multiple background agents for independent tasks\n- Wait for all agents to complete before proceeding\n- Collect results from all agents in one operation\n\nUse this when you need to parallelize work across multiple agents and synchronize on their completion.",
+          "parameters": {
+            "type": "object"
+          }
+        },
+        {
+          "name": "Subagent",
+          "description": "Run a specialized subagent for autonomous, multi-step work. It has separate context, so provide a self-contained task and request a concise final report.\n\nUse direct tools for small lookups. Launch independent subagents together, without duplicating their work. Use run_in_background for long work; completion is reported automatically, and SubagentOutput retrieves the result. Synchronous output is capped at 8 MB.",
+          "parameters": {
+            "type": "object"
+          }
+        },
+        {
+          "name": "SubagentOutput",
+          "description": "Check the status or retrieve output of background agents. Actions: 'status' (default) — current status; 'result' — full output with optional byte offset for incremental reads (output_file is read directly when available); 'cancel' — stop a running agent. Pass offset from a previous result call to read only new content. Do NOT poll in a loop to watch progress — you are notified automatically when a background agent completes. Collect the result after notification; check progress when needed to diagnose a blocker, coordinate work, or answer the user.",
+          "parameters": {
+            "type": "object"
+          }
+        },
+        {
+          "name": "TaskOutput",
+          "description": "Check the status or retrieve output of background agents. Actions: 'status' (default) — current status; 'result' — full output with optional byte offset for incremental reads (output_file is read directly when available); 'cancel' — stop a running agent. Pass offset from a previous result call to read only new content.",
+          "parameters": {
+            "type": "object"
+          }
+        },
+        {
+          "name": "wait_for_agent",
+          "description": "Wait for a background agent to complete using event-driven notifications. Blocks execution until the agent finishes (completed, failed, or cancelled) or timeout occurs. More efficient than polling - uses internal event channels for immediate completion detection.",
+          "parameters": {
+            "type": "object"
+          }
+        }
+      ],
+      "commands": [],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "session_shutdown",
+          "count": 1
+        },
+        {
+          "name": "session_start",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/30-tools/.trebol-guards/09-swarm-background-bash.ts",
+      "tools": [
+        {
+          "name": "Bash",
+          "description": "Execute shell commands and return the output. Supports pipes, redirections, and shell features.\nBoth stdout and stderr are captured.\n\nIMPORTANT: Pass timeout_seconds as a JSON integer number (never boolean true, and do not use a timeout field). Example: timeout_seconds=90. You MUST set it for every command to prevent hanging.\n\nCommand runs and blocks until completion or timeout.\n- If completes within timeout: Returns output immediately\n- If exceeds timeout: Auto-backgrounds and returns task_id for later retrieval\n\nParameters:\n- command (required): Shell command to execute\n- cwd: Working directory (default: current directory)\n- env: Environment variables as key-value pairs\n- timeout_seconds (REQUIRED): Maximum seconds to wait before auto-backgrounding\n\nExample:\n{\n  \"command\": \"npm test\",\n  \"timeout_seconds\": 30\n}\nReturns: Output if completes in 30s, or {\"backgrounded\": true, \"task_id\": \"...\"} if exceeds timeout",
+          "parameters": {
+            "type": "object"
+          }
+        },
+        {
+          "name": "ReadBackgroundCommand",
+          "description": "Reads output and status from a background bash command.\n\nUse this tool to:\n- Check the status of a background process (running, completed, failed, cancelled)\n- Read the stdout/stderr output from the process\n- Get the exit code when the process has completed\n- Query specific lines or search output with a pattern\n\nThe output is returned as structured JSON with metadata including timestamps,\nline numbers, and stream type (stdout/stderr) for each line.\n\nHeartbeat fields on metadata tell you whether a long-running process is still\nmaking progress without needing to diff polls yourself:\n- \"last_output_at\": RFC3339 timestamp of the most recent line written.\n- \"seconds_since_last_output\": how long ago that was (0 if never output).\n- \"bytes_written\": cumulative output size in bytes (strictly non-decreasing).\nA process that is \"running\" but has a high seconds_since_last_output may still\nbe healthy (network I/O, LLM calls) — prefer another poll over a cancel unless\nthe gap exceeds several minutes OR bytes_written has not changed between polls.\n\nIMPORTANT: By default only the last 100 lines (tail) are returned in the \"output\"\narray to keep responses concise. When the output is truncated, \"metadata.output_file\"\ncontains the path to a temp file with the complete output — read that file with the\nRead or Bash tool if you need earlier lines.\n\nParameters:\n- task_id (required): The ID of the background process to read from\n- action: \"output\" (default), \"status\", \"cancel\", or \"list\"\n- from_line: Start reading from this line number (1-indexed, default: 1)\n- max_lines: Maximum number of lines to return (default: 100, capped at 1000)\n- pattern: Regex pattern to filter output lines (optional)\n- stream: Filter by stream type - \"stdout\", \"stderr\", or empty for all (optional)",
+          "parameters": {
+            "type": "object"
+          }
+        }
+      ],
+      "commands": [],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "agent_end",
+          "count": 1
+        },
+        {
+          "name": "agent_settled",
+          "count": 1
+        },
+        {
+          "name": "agent_start",
+          "count": 2
+        },
+        {
+          "name": "session_before_compact",
+          "count": 1
+        },
+        {
+          "name": "session_start",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/30-tools/.trebol-guards/10-swarm-bash.ts",
+      "tools": [
+        {
+          "name": "bash",
+          "description": "Execute a shell command and capture stdout, stderr, exit code, duration, and timeout status. Pipes and redirections are supported.\n\nSet timeout_seconds to a JSON integer for every command; booleans are invalid. Defaults to 90 seconds when missing or malformed; values below the enforced 60-second minimum are raised automatically. Use cwd instead of cd.",
+          "parameters": {
+            "type": "object"
+          }
+        }
+      ],
+      "commands": [],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": []
+    },
+    {
+      "path": ".pi/extensions/30-tools/.trebol-guards/11-swarm-fs-tools.ts",
+      "tools": [
+        {
+          "name": "apply_patch",
+          "description": "Edit files with a V4A patch. Use it for creating, updating, deleting, or moving files.\n\n*** Begin Patch\n*** Update File: relative/or/absolute/path\n[*** Move to: new/path]\n@@ optional anchor (class/function line) to disambiguate\n context line (space prefix)\n-removed line\n+added line\n context line\n*** Add File: new/file (every body line starts with '+')\n*** Delete File: old/file\n*** End Patch\n\nRules: 3 lines of context around each change; use @@ anchors when context repeats; no line numbers. Multiple files may be combined — the patch applies atomically (all operations succeed or none are written).",
+          "parameters": {
+            "properties": {
+              "cwd": {
+                "description": "Optional directory that relative paths in the patch resolve against. Use this to edit a linked git worktree of the same repository when the conversation workspace is pinned to a different checkout. Absolute paths are still permitted when they fall inside that worktree.",
+                "type": "string"
+              },
+              "input": {
+                "description": "The full patch, from '*** Begin Patch' to '*** End Patch'.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "input"
+            ],
+            "type": "object"
+          }
+        },
+        {
+          "name": "Read",
+          "description": "Views an image file so you can actually see it.\n\nThis tool handles IMAGES ONLY (.jpg, .jpeg, .png, .gif, .webp). It returns the\nvisual content directly, which the shell cannot do.\n\nFor every other kind of file, use the shell instead:\n  - whole file:   cat FILE\n  - a slice:      sed -n 'START,ENDp' FILE\n  - with numbers: nl -ba FILE | sed -n 'START,ENDp'\n  - first/last:   head -n N FILE  /  tail -n N FILE\n  - search:       rg PATTERN        (add -n for line numbers, -t go to filter)\n  - find files:   rg --files -g 'PATTERN'",
+          "parameters": {
+            "type": "object"
+          }
+        },
+        {
+          "name": "Undo",
+          "description": "Reverts a file to its previous state.\n\nUsage:\n- path: The absolute path of the file to revert\n\nThis tool reverts a file to its previous state using a snapshot.\nSnapshots are automatically created before edits.",
+          "parameters": {
+            "properties": {
+              "path": {
+                "description": "The absolute path of the file to revert",
+                "type": "string"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "type": "object"
+          }
+        }
+      ],
+      "commands": [],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "session_start",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/30-tools/.trebol-guards/12-swarm-history-vault-tools.ts",
+      "tools": [
+        {
+          "name": "HistoryGet",
+          "description": "Read a bounded excerpt from one prior conversation selected with HistorySearch. Defaults to the current workspace — just pass conversation_id. If the conversation lives in another project (e.g. it came from a scope=all search) OR the user explicitly asks to read across projects, set all_workspaces=true to read it by ID regardless of directory. You do NOT need to pass workspace_path; that is an advanced exact-path override. Returns message IDs, roles, timestamps, and truncation provenance.",
+          "parameters": {
+            "type": "object"
+          }
+        },
+        {
+          "name": "HistorySearch",
+          "description": "Search prior conversations by title, preview, or substantive message text. Defaults to the current workspace (the common case — just pass a query). Set scope=\"all\" to search across every workspace, but only do that when the current workspace has no match or the user explicitly asks to look across projects. You normally do NOT need to pass workspace_path; it is an advanced override for pinning one exact absolute workspace. Returns bounded conversation metadata and provenance, not full transcripts. complete=false and partial_reasons mean the scan hit a resource limit or skipped malformed/oversized records; do not interpret partial results as exhaustive. Use HistoryGet only for selected conversation IDs.",
+          "parameters": {
+            "type": "object"
+          }
+        },
+        {
+          "name": "vault",
+          "description": "Manage stored connection and authentication entries for autonomous work. Use action=list with optional query, kind, scope, or tags to find an entry, action=get to retrieve one, action=add to store one, and action=remove to delete one. The transparent vault returns retrieved secrets in plaintext; use them only for the current task and never echo, quote, log, commit, or expose them. Use action=remove only when requested.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": [
+                  "add",
+                  "list",
+                  "get",
+                  "remove"
+                ],
+                "description": "Use get for one credential, list to discover available credentials, add to store a credential, or remove to delete one."
+              },
+              "id": {
+                "type": "string",
+                "description": "Credential identifier. Required for get and remove; use the id returned by list."
+              },
+              "kind": {
+                "type": "string",
+                "description": "Credential kind, such as password, api_key, or ssh_key."
+              },
+              "query": {
+                "type": "string",
+                "description": "Optional case-insensitive search across credential id, name, and kind. Prefer query/list before asking the user to provide a credential."
+              },
+              "scope": {
+                "type": "string",
+                "description": "Optional credential scope filter."
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Optional tags that every result must contain."
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "default": 20
+              },
+              "cursor": {
+                "type": "string",
+                "description": "Cursor returned by a previous list operation."
+              },
+              "details": {
+                "type": "boolean",
+                "default": false,
+                "description": "Include nonessential metadata such as tags and allowed hosts."
+              },
+              "secret": {
+                "type": "string",
+                "description": "Credential value to store. The vault is transparent and returns secrets in plaintext for get; never echo, log, commit, or expose retrieved secrets."
+              },
+              "name": {
+                "type": "string"
+              },
+              "target": {
+                "type": "string",
+                "description": "Optional environment variable or file target associated with this entry."
+              }
+            },
+            "required": [
+              "action"
+            ]
+          }
+        }
+      ],
+      "commands": [],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "session_start",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/30-tools/.trebol-guards/13-taskmanage.ts",
+      "tools": [
+        {
+          "name": "TaskManage",
+          "description": "Manage ordered tasks. Every new task requires 1–12 task-specific questions {id,text}. Complete with answers [{question,answer,evidence}] covering every question in the same update; evidence must be a workspace file#Heading or file#Lx-Ly reference, or tool:<ToolName>[#<n>] (1-based) for a live tool result from this session. Repair questionless legacy tasks before activation/completion. Parent completion requires finished children. Use parentTaskId for hierarchy and addBlockedBy for dependencies. Atomic batches roll back on failure. Read errors and change invalid input before retrying; never fabricate answers.",
+          "parameters": {
+            "type": "object"
+          }
+        }
+      ],
+      "commands": [
+        "tasks"
+      ],
+      "shortcuts": [
+        "ctrl+alt+shift+j"
+      ],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "agent_settled",
+          "count": 1
+        },
+        {
+          "name": "before_agent_start",
+          "count": 3
+        },
+        {
+          "name": "input",
+          "count": 3
+        },
+        {
+          "name": "message_end",
+          "count": 1
+        },
+        {
+          "name": "message_update",
+          "count": 1
+        },
+        {
+          "name": "session_before_compact",
+          "count": 1
+        },
+        {
+          "name": "session_shutdown",
+          "count": 3
+        },
+        {
+          "name": "session_start",
+          "count": 5
+        },
+        {
+          "name": "shutdown",
+          "count": 1
+        },
+        {
+          "name": "tool_call",
+          "count": 2
+        },
+        {
+          "name": "tool_execution_end",
+          "count": 1
+        },
+        {
+          "name": "tool_execution_update",
+          "count": 1
+        },
+        {
+          "name": "tool_result",
+          "count": 2
+        },
+        {
+          "name": "turn_end",
+          "count": 2
+        },
+        {
+          "name": "turn_start",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/30-tools/.trebol-guards/14-vault.ts",
+      "tools": [],
+      "commands": [
+        "vault"
+      ],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": []
+    },
+    {
+      "path": ".pi/extensions/40-state/.trebol-guards/00-memory-history.ts",
+      "tools": [
+        {
+          "name": "memory_history",
+          "description": "Recall and enrich durable redacted memory. Use operation=ask with a natural-language query to have a read-only memory agent answer using cited scoped records; no evidence yields no answer. Use operation=recall to retrieve source cards without an answer. To pass an explicit 'remember that' request to the memory reviewer, use operation=offer with text, source and cited evidence in repository/worktree scope; it stores only a candidate and acknowledges indexing. Memory records what is known: project architecture, domain facts, terminology, decisions and rationale, constraints, preferences, and relevant ongoing context. A project's established process is knowledge about that project. Reusable instructions for how an agent should investigate, implement, debug, or verify belong in skills, not memory. Separate factual context from procedural advice when an observation contains both. Preserve evidence, uncertainty, and freshness; later corrections may invalidate earlier claims. Do not treat an agent's success claim as verified fact. Use repository scope for shared project knowledge; worktree scope for unmerged or experimental facts; session scope for local conversational context. Use global only for explicitly shareable cross-project facts or preferences, not merely because a lesson sounds reusable. Do not duplicate a fact into both repository and global scope by default. Reading combined scopes does not authorize wider writes. Search before saving to avoid duplicates. Include evidence references; exclude secrets and raw transcripts. Defaults to repository scope. Search scope all includes repository/worktree/global. Use search with status candidate to find pending knowledge, then get by id to inspect its full evidence. Review source evidence and later corrections before using correct to mark a candidate verified; leave unsupported claims pending. Writes default to candidate; verified records require evidence references (verification is an attributed claim, not automatic proof). correct/delete require id and expectedRevision. Agent tool calls cannot write global memory. Ask the user to review an existing verified record with /memory-promote repository|worktree ID [namespace]; global reads remain available.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "operation"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "operation": {
+                "type": "string",
+                "enum": [
+                  "remember",
+                  "offer",
+                  "search",
+                  "recall",
+                  "ask",
+                  "replay",
+                  "migrate",
+                  "correct",
+                  "delete",
+                  "get"
+                ]
+              },
+              "text": {
+                "type": "string"
+              },
+              "note": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "ref"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ref": {
+                      "type": "string"
+                    },
+                    "quote": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "candidate",
+                  "verified"
+                ]
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "fact",
+                  "decision",
+                  "process",
+                  "context"
+                ]
+              },
+              "source": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              },
+              "expectedRevision": {
+                "type": "string"
+              },
+              "namespace": {
+                "type": "string"
+              },
+              "limit": {
+                "type": "number"
+              },
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "topical",
+                  "task"
+                ]
+              },
+              "scope": {
+                "type": "string",
+                "enum": [
+                  "repository",
+                  "worktree",
+                  "global",
+                  "session",
+                  "all"
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "commands": [
+        "memory-promote"
+      ],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "before_agent_start",
+          "count": 1
+        },
+        {
+          "name": "session_shutdown",
+          "count": 1
+        },
+        {
+          "name": "session_start",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/40-state/.trebol-guards/01-task-candidate-capture.ts",
+      "tools": [],
+      "commands": [],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "session_start",
+          "count": 1
+        },
+        {
+          "name": "tool_result",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/40-state/.trebol-guards/02-knowledge-enrichment.ts",
+      "tools": [],
+      "commands": [
+        "memory-capture"
+      ],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "agent_end",
+          "count": 1
+        },
+        {
+          "name": "agent_settled",
+          "count": 1
+        },
+        {
+          "name": "agent_start",
+          "count": 1
+        },
+        {
+          "name": "session_before_compact",
+          "count": 2
+        },
+        {
+          "name": "session_shutdown",
+          "count": 1
+        },
+        {
+          "name": "session_start",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/40-state/.trebol-guards/03-candidate-memory-review.ts",
+      "tools": [],
+      "commands": [
+        "memory-review"
+      ],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "agent_end",
+          "count": 1
+        },
+        {
+          "name": "agent_settled",
+          "count": 1
+        },
+        {
+          "name": "agent_start",
+          "count": 1
+        },
+        {
+          "name": "session_before_compact",
+          "count": 1
+        },
+        {
+          "name": "session_before_fork",
+          "count": 1
+        },
+        {
+          "name": "session_before_switch",
+          "count": 1
+        },
+        {
+          "name": "session_shutdown",
+          "count": 1
+        },
+        {
+          "name": "session_start",
+          "count": 1
+        },
+        {
+          "name": "session_switch",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/40-state/.trebol-guards/04-jev-knowledge-audit.ts",
+      "tools": [],
+      "commands": [],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "agent_end",
+          "count": 1
+        },
+        {
+          "name": "agent_settled",
+          "count": 1
+        },
+        {
+          "name": "agent_start",
+          "count": 1
+        },
+        {
+          "name": "before_agent_start",
+          "count": 1
+        },
+        {
+          "name": "context",
+          "count": 1
+        },
+        {
+          "name": "input",
+          "count": 1
+        },
+        {
+          "name": "message_end",
+          "count": 1
+        },
+        {
+          "name": "session_before_compact",
+          "count": 1
+        },
+        {
+          "name": "session_before_fork",
+          "count": 1
+        },
+        {
+          "name": "session_before_switch",
+          "count": 1
+        },
+        {
+          "name": "session_compact",
+          "count": 1
+        },
+        {
+          "name": "session_fork",
+          "count": 1
+        },
+        {
+          "name": "session_shutdown",
+          "count": 2
+        },
+        {
+          "name": "session_start",
+          "count": 1
+        },
+        {
+          "name": "session_switch",
+          "count": 1
+        },
+        {
+          "name": "tool_result",
+          "count": 1
+        },
+        {
+          "name": "turn_end",
+          "count": 1
+        },
+        {
+          "name": "turn_start",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/40-state/.trebol-guards/05-memory-maintenance.ts",
+      "tools": [],
+      "commands": [],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "agent_end",
+          "count": 1
+        },
+        {
+          "name": "agent_settled",
+          "count": 1
+        },
+        {
+          "name": "agent_start",
+          "count": 1
+        },
+        {
+          "name": "context",
+          "count": 1
+        },
+        {
+          "name": "input",
+          "count": 1
+        },
+        {
+          "name": "session_before_compact",
+          "count": 1
+        },
+        {
+          "name": "session_before_fork",
+          "count": 1
+        },
+        {
+          "name": "session_before_switch",
+          "count": 1
+        },
+        {
+          "name": "session_compact",
+          "count": 1
+        },
+        {
+          "name": "session_fork",
+          "count": 1
+        },
+        {
+          "name": "session_shutdown",
+          "count": 1
+        },
+        {
+          "name": "session_start",
+          "count": 1
+        },
+        {
+          "name": "session_switch",
+          "count": 1
+        },
+        {
+          "name": "tool_call",
+          "count": 1
+        },
+        {
+          "name": "tool_result",
+          "count": 1
+        },
+        {
+          "name": "turn_end",
+          "count": 1
+        },
+        {
+          "name": "turn_start",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/40-state/.trebol-guards/06-swarm-conversation-metadata.ts",
+      "tools": [],
+      "commands": [],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "agent_end",
+          "count": 1
+        },
+        {
+          "name": "agent_settled",
+          "count": 1
+        },
+        {
+          "name": "agent_start",
+          "count": 1
+        },
+        {
+          "name": "session_before_compact",
+          "count": 1
+        },
+        {
+          "name": "session_start",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/50-ui/.trebol-guards/00-control-panel.ts",
+      "tools": [],
+      "commands": [],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": []
+    },
+    {
+      "path": ".pi/extensions/50-ui/.trebol-guards/01-supervisor.ts",
+      "tools": [],
+      "commands": [
+        "supervisor"
+      ],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "session_shutdown",
+          "count": 1
+        },
+        {
+          "name": "session_start",
+          "count": 1
+        },
+        {
+          "name": "turn_end",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/50-ui/.trebol-guards/02-conversation-metrics.ts",
+      "tools": [],
+      "commands": [
+        "metrics"
+      ],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "agent_end",
+          "count": 1
+        },
+        {
+          "name": "agent_settled",
+          "count": 1
+        },
+        {
+          "name": "agent_start",
+          "count": 2
+        },
+        {
+          "name": "message_end",
+          "count": 1
+        },
+        {
+          "name": "session_before_compact",
+          "count": 1
+        },
+        {
+          "name": "session_shutdown",
+          "count": 1
+        },
+        {
+          "name": "session_start",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/50-ui/.trebol-guards/03-clover-startup.ts",
+      "tools": [],
+      "commands": [],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "session_shutdown",
+          "count": 1
+        },
+        {
+          "name": "session_start",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/50-ui/.trebol-guards/04-swarm-themes.ts",
+      "tools": [],
+      "commands": [],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "session_start",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": ".pi/extensions/50-ui/.trebol-guards/05-swarm-tools-status.ts",
+      "tools": [],
+      "commands": [
+        "swarm-tools"
+      ],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": []
+    },
+    {
+      "path": ".pi/extensions/50-ui/.trebol-guards/06-swarm-btw.ts",
+      "tools": [],
+      "commands": [
+        "btw"
+      ],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": []
+    },
+    {
+      "path": ".pi/extensions/50-ui/.trebol-guards/07-swarm-image-paste.ts",
+      "tools": [],
+      "commands": [],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": []
+    },
+    {
+      "path": ".pi/extensions/50-ui/.trebol-guards/08-green-chat-input.ts",
+      "tools": [],
+      "commands": [],
+      "shortcuts": [],
+      "flags": [],
+      "messageRenderers": [],
+      "entryRenderers": [],
+      "events": [
+        {
+          "name": "session_start",
+          "count": 1
+        }
+      ]
+    }
+  ]
+}

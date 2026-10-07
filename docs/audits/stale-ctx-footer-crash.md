@@ -1,6 +1,6 @@
 # Audit: stale-ctx uncaughtException from MetricsFooter.render after reload
 
-Date: 2026-09-29 · pi 0.87.1 · extension: `.pi/extensions/50-ui/conversation-metrics.ts`
+Date: 2026-09-29 · pi 0.87.1 · extension: `extensions/conversation-metrics/extension.ts`
 
 ## Observed crash (real records)
 
@@ -13,7 +13,7 @@ Stack (byte-verified against installed bundle):
 ```text
 ExtensionRunner.assertActive            chunk-OJP47DM6.js:656:12257
 get ui                                  chunk-OJP47DM6.js:656:14246
-MetricsFooter.render                    .pi/extensions/50-ui/conversation-metrics.ts:188:19   (pre-fix)
+MetricsFooter.render                    extensions/conversation-metrics/extension.ts:188:19   (pre-fix)
 Container.render / VStack.render        chunk-OJP47DM6.js:350:18922, 385:775
 layoutComponent -> renderLayoutFrame    chunk-OJP47DM6.js:385
 TuiAltScreen.doRender                   chunk-OJP47DM6.js:388:6641

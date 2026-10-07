@@ -10,8 +10,34 @@ const KEY = Symbol.for("pi-swarm-hook-state");
 type Shared = { state: State; pi?: any; present?: (data: any) => void };
 const root = globalThis as typeof globalThis & { [KEY]?: Shared };
 const shared: Shared = root[KEY] ?? (root[KEY] = { state: { enabled: {}, visible: false, recent: [], counts: { registered: 0, executed: 0, blocked: 0, failed: 0, skipped: 0 } } });
-type RegisteredHandler = { key: string; event: string; handler: (payload: any, ctx: any) => Promise<any> };
-const registeredHandlers: RegisteredHandler[] = ((globalThis as any)[Symbol.for("pi-swarm-registered-hook-handlers")] ??= []);
+type RegisteredHandler = { session?: string; event: string; handler: (payload: any, ctx: any) => Promise<any> };
+const registeredHandlers: RegisteredHandler[] = ((globalThis as any)[Symbol.for("pi-swarm-session-hook-handlers-v2")] ??= []);
+const hookOwners = new WeakMap<object, { session?: string; entries: RegisteredHandler[] }>();
+function registerSessionHandler(pi: any, entry: RegisteredHandler): void {
+  let owner = hookOwners.get(pi);
+  if (!owner) {
+    owner = { entries: [] }; hookOwners.set(pi, owner);
+    const owned = owner;
+    const release = () => {
+      for (const item of owned.entries) {
+        const index = registeredHandlers.indexOf(item);
+        if (index >= 0) registeredHandlers.splice(index, 1);
+        item.session = undefined;
+      }
+      owned.session = undefined;
+    };
+    pi.on("session_start", (_event: any, ctx: any) => {
+      release();
+      const id = ctx?.sessionManager?.getSessionId?.();
+      if (typeof id !== "string" || !id) return;
+      owned.session = id;
+      for (const item of owned.entries) { item.session = id; registeredHandlers.push(item); }
+    });
+    pi.on("session_shutdown", release);
+  }
+  owner.entries.push(entry);
+  if (owner.session) { entry.session = owner.session; registeredHandlers.push(entry); }
+}
 // Pi /reload can retain Symbol.for state from an older extension module. Normalize
 // it before any handler registration so upgrades never fail on missing fields.
 function normalizeState() {
@@ -132,24 +158,23 @@ export function registerHook(pi: any, group: HookGroup, event: string, handler: 
       recordHook(group, event, payload, "failed", error instanceof Error ? error.message : String(error)); persistHookState(pi); throw error;
     }
   };
-  const key = `${group}:${event}`;
-  const previous = registeredHandlers.findIndex((entry) => entry.key === key);
-  if (previous >= 0) registeredHandlers.splice(previous, 1);
-  registeredHandlers.push({ key, event, handler: callback });
+  // Each native registration remains distinct, even within the same group.
+  // Only live registrations for the caller's session participate in fallback
+  // dispatch. A reload/disabling an extension must not retain its closures.
+  registerSessionHandler(pi, { event, handler: callback });
   pi.on(event, callback);
 }
 
-/**
- * Run the same registered tool hooks for a host-composed/nested tool call.
- * Pi only emits tool_call/tool_result around tools executed by its agent loop;
- * CodeMode invokes registered tools inside its interpreter, so without this
- * bridge nested calls would silently bypass task, disk, skill-budget, and
- * other policy hooks.
+/** Compatibility-only supervisor dispatch for contexts without executeTool.
+ * Native nested tools use Pi's executor instead. This registry contains only
+ * Trebol hooks, never an assertion that all third-party host hooks are covered.
  */
 export async function dispatchRegisteredHook(event: string, payload: any, ctx: any = {}): Promise<any> {
+  const session = ctx?.sessionManager?.getSessionId?.();
+  if (typeof session !== "string" || !session) throw new Error("Hook dispatch requires an active session identity");
   let merged: any;
-  for (const entry of registeredHandlers) {
-    if (entry.event !== event) continue;
+  for (const entry of [...registeredHandlers]) {
+    if (entry.event !== event || entry.session !== session) continue;
     const result = await entry.handler(payload, ctx);
     if (result?.block === true) return result;
     if (result && typeof result === "object") merged = { ...(merged ?? {}), ...result };

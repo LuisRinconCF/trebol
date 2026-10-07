@@ -82,7 +82,7 @@ pi-ai event documentation and actual implementation; not every provider audited.
   exemption; focused-task/budget/review state determines skill denial. gateTool itself
   can mutate onboardingRecoveryArmed, so don't repeatedly call it per delta as a
   supposedly pure preview. `:1119-1139`: actual Skill invocation mutates usage/budget.
-- `.pi/extensions/30-tools/swarm-bash.ts:40-65`, `.pi/lib/tools/swarm-bash.ts:23-38`:
+- `extensions/swarm-bash/extension.ts:40-65`, `.pi/lib/tools/swarm-bash.ts:23-38`:
   registered shell execution and model-facing command/cwd/env/timeout schema.
 
 ## Comparison

@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import extension from "../../extensions/10-context/swarm-context.ts";
+import extension from "../../../extensions/swarm-context/extension.ts";
 import { gateActiveTools } from "../../lib/runtime/swarm-tool-gating.ts";
 
 it("keeps context tools visible, registers context_read, and reloads Pi custom entries", async () => {

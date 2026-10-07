@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import extension, { fetchEvidence, validateURL } from "../../extensions/30-tools/research-tools.ts";
+import extension, { fetchEvidence, validateURL } from "../../../extensions/research-tools/extension.ts";
 
 describe("research tool policy", () => {
   it("allows HTTPS and rejects private or non-HTTPS URLs", () => {

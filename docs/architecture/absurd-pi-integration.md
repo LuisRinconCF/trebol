@@ -43,7 +43,7 @@ worker is `packages/tools/agents/src/worker-daemon.ts`: it registers only the ge
 task, starts Absurd with concurrency one, reports health, and closes its worker
 and client on shutdown. Its runtime factory is injectable for offline tests.
 The transport-neutral control/task tool contract is in
-`packages/runtime/runtime-contracts/src/control-task.ts`; `.pi/extensions/30-tools/control-task-tools.ts`
+`packages/runtime/runtime-contracts/src/control-task.ts`; `extensions/control-task-tools/extension.ts`
 adapts goal/task/run create/get/status/cancel to an injected authoritative
 client. It intentionally does not implement `/goal` or `/loop`, and does not
 introduce another store.

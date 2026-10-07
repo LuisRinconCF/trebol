@@ -79,19 +79,8 @@ Run `/auto on`, then send a task. `/auto status` checks the mode and `/auto off`
 
 ## How it works
 
-Pi loads extensions from `.pi/extensions/` one level deep. The numeric layer
-prefixes define load order:
-
-| Layer | Responsibility |
-| --- | --- |
-| `00-runtime` | Integration boundary, hooks, runtime, transport, telemetry |
-| `10-context` | Prompt assembly, context, plan mode, skills, thinking |
-| `20-policy` | Disk hooks and policy nudges |
-| `30-tools` | Agents, tasks, bash, filesystem, search, MCP, research, vault, and more |
-| `40-state` | Memory history and conversation metadata |
-| `50-ui` | Metrics, themes, status, control panel, and UI extensions |
-
-Each layer has a `package.json` whose `pi.extensions` list is authoritative.
+Pi loads explicit `extensions/<name>/index.ts` entries from the root package manifest.
+Each extension has its own folder; there are no numeric layer packages.
 An extension registers with Pi using `registerTool`, `registerCommand`,
 `registerShortcut`, or lifecycle handlers such as `session_start`,
 `before_agent_start`, `tool_call`, and `tool_result`.
@@ -99,7 +88,7 @@ An extension registers with Pi using `registerTool`, `registerCommand`,
 The implementation is split between thin Pi adapters and reusable packages:
 
 ```text
-.pi/extensions/       Pi entrypoints and registration
+extensions/           One folder per Pi extension, with its own entrypoint
 .pi/lib/              Shared runtime, context, tool, state, and UI helpers
 packages/             Reusable TypeScript packages grouped by capability
 docs/architecture/    Living design and migration notes
@@ -117,7 +106,7 @@ state; it must not become the source of truth for that state.
 
 | Path | Purpose |
 | --- | --- |
-| `.pi/extensions/` | Pi extension entrypoints, grouped by load layer |
+| `extensions/` | One independently selectable Pi extension per folder |
 | `.pi/lib/` | Shared implementation used by extensions |
 | `.pi/test/` | Tests for Pi-specific code |
 | `.pi/config/` | Project prompt and Swarm settings; credentials stay ignored |
@@ -160,18 +149,15 @@ Build all packages:
 npm run build
 ```
 
-Pi discovers the project extensions from the repository's `package.json`:
+Pi discovers project extensions from the repository's `package.json` (excerpt; the actual manifest lists every enabled entry):
 
 ```json
 {
   "pi": {
     "extensions": [
-      ".pi/extensions/00-runtime",
-      ".pi/extensions/10-context",
-      ".pi/extensions/20-policy",
-      ".pi/extensions/30-tools",
-      ".pi/extensions/40-state",
-      ".pi/extensions/50-ui"
+      "extensions/swarm-agent-tools/index.ts",
+      "extensions/taskmanage/index.ts",
+      "extensions/memory-history/index.ts"
     ],
     "themes": [".pi/themes"]
   }
@@ -396,7 +382,7 @@ and [docs/architecture/hooks-prompts-tools-pi-equivalence.md](docs/architecture/
 Changes should preserve the Pi/Swarm boundary and keep extensions thin:
 
 1. Put domain logic in the appropriate package or `.pi/lib/` module.
-2. Put registration and Pi lifecycle wiring in `.pi/extensions/`.
+2. Put registration and Pi lifecycle wiring in `extensions/<name>/`.
 3. Put authorization and execution constraints in the policy layer.
 4. Put rendering in the UI or render bridge, never in semantic state.
 5. Update `AGENTS.md` and architecture notes when repository boundaries change.

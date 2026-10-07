@@ -8,7 +8,7 @@ which makes the hierarchy weak and can mis-handle ANSI styling.
 
 ## Choreography
 
-1. Add small pure helpers in `.pi/extensions/50-ui/conversation-metrics.ts` to
+1. Add small pure helpers in `extensions/conversation-metrics/extension.ts` to
    build an unstyled identity row and metrics row, then wrap each row before
    applying theme colors.
 2. Render a compact identity row containing a state glyph, provider/model

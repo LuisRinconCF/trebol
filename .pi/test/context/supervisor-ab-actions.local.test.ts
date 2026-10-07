@@ -12,11 +12,12 @@ it.skipIf(!process.env.PI_SWARM_SUPERVISOR_AB_ACTIONS)("reviewed B arm reconcile
   const manager=new TaskManager();
   for(const t of c.tasks)manager.execute({operations:[{key:`seed-${t.id}`,op:"create",subject:t.subject,status:t.status,active:t.active}]});
   const before=manager.snapshot();(globalThis as any)[symbol]=manager;
-  registerBootstrapHandoff({name:"TaskManage",execute:async(_id:string,input:any)=>{const result=manager.execute(input);return {content:[{type:"text",text:JSON.stringify(result)}],isError:result.status!=="succeeded"};}});
+  const handoffContext={sessionManager:{getSessionId:()=>`test-${c.id}`}};
+  registerBootstrapHandoff({on:(event:string,fn:any)=>{if(event==="session_start")fn({},handoffContext);}},{name:"TaskManage",execute:async(_id:string,input:any)=>{const result=manager.execute(input);return {content:[{type:"text",text:JSON.stringify(result)}],isError:result.status!=="succeeded"};}});
   const verdict=review.findings.find((r:any)=>r.case===c.id),snapshot=collectSupervisorState("",before.tasks,{},{}).tasks;
   const proposals=verdict.verdict==="confirm"?verdict.permitted_operations.map((op:any,i:number)=>op.op==="create"?{op:"create",task:{id:`${c.id}-${i}`,title:op.subject,status:"pending"}}:{op:"update",targetTaskId:snapshot[0].id,snapshotHash:hashTaskSnapshot(snapshot[0]),task:{note:op.text}}):[];
   const receipt={operations:[{operation:"supervisor_review",outcome:"ok",verdict:verdict.verdict,evidenceIds:[verdict.evidence_id]},...proposals.map((proposal:any)=>({operation:"supervisor_task_proposal",outcome:"ok",proposal,evidenceIds:[verdict.evidence_id]}))]};
-  const outcomes=await applySupervisorTaskProposals({getActiveTools:()=>["TaskManage"]},{sessionId:`test-${c.id}`},snapshot,receipt,new AbortController().signal);
+  const outcomes=await applySupervisorTaskProposals({getActiveTools:()=>["TaskManage"]},handoffContext,snapshot,receipt,new AbortController().signal);
   expect(outcomes.every(o=>o.status==="dispatched")).toBe(true);
   const after=manager.snapshot();if(c.expected==="quiet")expect(after).toEqual(before);else expect(after.tasks.length).toBe(before.tasks.length+1);
   expect(after.tasks.filter(t=>t.status==="completed").length).toBe(before.tasks.filter(t=>t.status==="completed").length);

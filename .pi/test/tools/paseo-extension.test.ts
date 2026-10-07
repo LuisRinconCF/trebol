@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocked = vi.hoisted(() => ({ start: vi.fn(), setup: vi.fn(), applySetup: vi.fn(), stop: vi.fn(), pair: vi.fn() }));
 vi.mock("../../lib/tools/paseo-setup.ts", () => ({ defaultListen: () => "127.0.0.1:6767", paseo: { applySetup: mocked.applySetup }, paseoStart: mocked.start, paseoSetup: mocked.setup, paseoStop: mocked.stop, paseoBuild: vi.fn(), paseoPair: mocked.pair, paseoStatus: vi.fn(), paseoUpdate: vi.fn() }));
-import extension from "../../extensions/30-tools/paseo.ts";
+import extension from "../../../extensions/paseo/extension.ts";
 function register() { const handlers = new Map<string, any>(); let tool: any, command: any; extension({ on: (name, handler) => handlers.set(name, handler), registerTool: value => { tool = value; }, registerCommand: (_name, spec) => { command = spec; } }); return { handlers, tool, command }; }
 beforeEach(() => { vi.clearAllMocks(); mocked.start.mockResolvedValue({ success: true, listen: "127.0.0.1:6767" }); mocked.setup.mockResolvedValue({ success: true }); mocked.applySetup.mockResolvedValue({ success: true }); mocked.pair.mockResolvedValue({ ok: true, output: "Tailscale pairing URL:\nhttps://machine.ts.net" }); });
 describe("Paseo network consent", () => {

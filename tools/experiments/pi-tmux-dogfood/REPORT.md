@@ -3,7 +3,7 @@
 ## Baseline
 
 Dedicated pane pi-footer-dogfood:1.1, 110x32, actual Pi with explicitly loaded
-.pi/extensions/50-ui/conversation-metrics.ts, clover-plexus/astra. Capture:
+extensions/conversation-metrics/extension.ts, clover-plexus/astra. Capture:
 artifacts/pi-tmux-dogfood/baseline.txt. Shows idle marker and model, then 0m 00s
 and 0 output tokens. No contributed segments loaded. Cannot associate this API
 conversation with any existing user-owned terminal pane. Existing panes untouched.
@@ -53,7 +53,7 @@ removed, metrics on separate row without terminal crash. Two real prompts reques
 prose only, no tools. No scripted provider used. Pane remains pi-footer-dogfood:1.1.
 ANSI color-70.ansi confirms green RGB(74,215,165), mint RGB(57,210,192), muted
 RGB(138,147,166), panel RGB(21,27,36), matching swarm-swarmcode theme.
-`git diff --check -- .pi/extensions/50-ui/conversation-metrics.ts AGENTS.md` passed.
+`git diff --check -- extensions/conversation-metrics/extension.ts AGENTS.md` passed.
 Expanded running work, pressure warning thresholds, unknown-after-compaction and
 extension toggle updates remain untested live; no claim of exhaustive mode coverage.
 

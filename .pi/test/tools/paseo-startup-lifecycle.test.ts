@@ -4,7 +4,7 @@ vi.mock("../../lib/tools/paseo-setup.ts", () => ({
   paseoStart: state.start, defaultListen: vi.fn(), paseo: {}, paseoBuild: vi.fn(),
   paseoPair: vi.fn(), paseoSetup: vi.fn(), paseoStatus: vi.fn(), paseoStop: vi.fn(), paseoUpdate: vi.fn(),
 }));
-import extension from "../../extensions/30-tools/paseo.ts";
+import extension from "../../../extensions/paseo/extension.ts";
 import { startupNotices } from "../../lib/ui/startup-notices.ts";
 
 it("does not access expired UI after delayed startup resolves", async () => {

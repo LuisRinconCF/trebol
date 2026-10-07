@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import extension from "../../extensions/40-state/candidate-memory-review.ts";
+import extension from "../../../extensions/candidate-memory-review/extension.ts";
 import { openKnowledgeStore } from "../../lib/state/knowledge-store.ts";
 import { loadSessionEvidence } from "../../lib/state/candidate-memory-review.ts";
 import { recallKnowledge } from "../../lib/context/knowledge-recall.ts";

@@ -8,7 +8,7 @@ import {
 } from "../../lib/policy/project-structure.ts";
 import { applyArtifacts, parseEnvVars, planArtifacts, validateName, validateSummary, type ProjectAnswers } from "../../lib/policy/project-scaffold.ts";
 import { evaluateToolCall } from "../../lib/policy/structure-guard.ts";
-import { buildInitPrompt, executeProjectInit, inspectTarget, registerProjectInit, resolveTarget, validateAnswers } from "../../extensions/20-policy/project-init.ts";
+import { buildInitPrompt, executeProjectInit, inspectTarget, registerProjectInit, resolveTarget, validateAnswers } from "../../../extensions/project-init/extension.ts";
 
 const workspace = () => mkdtempSync(join(tmpdir(), "pi-project-init-"));
 

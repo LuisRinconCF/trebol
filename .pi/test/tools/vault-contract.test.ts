@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { registerVaultTool } from "../../extensions/30-tools/vault.ts";
+import { registerVaultTool } from "../../../extensions/vault/extension.ts";
 import { VAULT_CONTRACT } from "../../lib/tools/swarm-vault-tools.contract.ts";
 
 describe("vault tool contract", () => {

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { registerVault, registerVaultTool } from "../../extensions/30-tools/vault.ts";
+import { registerVault, registerVaultTool } from "../../../extensions/vault/extension.ts";
 
 describe("vault extension", () => {
   it("registers a unified tool and stores global credentials", async () => {

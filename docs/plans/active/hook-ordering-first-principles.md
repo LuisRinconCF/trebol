@@ -111,10 +111,10 @@ Current code facts:
   recordHook() calls addHookObservation()
   recordHook() calls shared.present()
 
-.pi/extensions/00-runtime/hooks.ts
+extensions/hooks/extension.ts
   setHookPresenter() calls pi.sendMessage()
 
-.pi/extensions/00-runtime/hooks.ts
+extensions/hooks/extension.ts
   registerHookRenderers() is intentionally empty
 
 codemode

@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { captureTaskCandidates, type TaskCandidateInput } from "../../lib/state/task-candidate-capture.ts";
 import { openKnowledgeStore } from "../../lib/state/knowledge-store.ts";
 import { recallKnowledge } from "../../lib/context/knowledge-recall.ts";
-import extension from "../../extensions/40-state/task-candidate-capture.ts";
+import extension from "../../../extensions/task-candidate-capture/extension.ts";
 
 const roots: string[] = [];
 afterEach(() => { for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true }); });

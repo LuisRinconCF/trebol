@@ -6,7 +6,7 @@ import {
   MAX_SUBMITTED_PLAN_BYTES, PlanModeController, enterPlanToolResult, exitPlanApprovedResult, exitPlanNoPlanError,
   exitPlanRejectedResult, planExitDetected, problemBreakdownPrompt, readSubmittedPlan, simulationReminderMessage, validatePlanContent,
 } from "../../lib/context/swarm-plan-mode.ts";
-import { registerPlanMode } from "../../extensions/10-context/swarm-plan-mode.ts";
+import { registerPlanMode } from "../../../extensions/swarm-plan-mode/extension.ts";
 import { createSwarmBuiltinPipeline } from "../../lib/runtime/swarm-builtin-hooks.ts";
 import { resetReminderSequences } from "../../lib/policy/swarm-annoyance-nudge.ts";
 

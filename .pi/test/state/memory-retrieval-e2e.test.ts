@@ -2,7 +2,7 @@ import { afterEach, expect, it } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import extension from "../../extensions/40-state/memory-history.ts";
+import extension from "../../../extensions/memory-history/extension.ts";
 
 const previous = process.env.PI_SWARM_MEMORY_DIR;
 const dirs: string[] = [];

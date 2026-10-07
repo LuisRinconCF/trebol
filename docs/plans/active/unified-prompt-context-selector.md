@@ -117,12 +117,12 @@ will remain a compatibility entry point.
 
 ## Planned file scope
 
-- `.pi/extensions/10-context/system-prompts.ts`: consolidated profile compatibility,
+- `extensions/system-prompts/extension.ts`: consolidated profile compatibility,
   migration, and `/sp` behavior.
-- `.pi/extensions/10-context/swarm-prompt.ts`: selection-aware prompt composition and
+- `extensions/swarm-prompt/extension.ts`: selection-aware prompt composition and
   next-boundary loading.
 - `.pi/lib/context/swarm-context.ts`: source/file selection and bounded resolution.
-- `.pi/extensions/00-runtime/swarm-transport-parity.ts` or the owning tool-exposure seam:
+- `extensions/swarm-transport-parity/extension.ts` or the owning tool-exposure seam:
   selected active-tool handling, only if required by the actual host contract.
 - New focused library/module only if an existing owner cannot safely hold the
   persisted selection contract; avoid duplicate stores.

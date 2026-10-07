@@ -1,7 +1,7 @@
 import { applySupervisorSettings, runSupervisorAudit } from "../../lib/context/supervisor-control.ts";
 import { loadSupervisorSettings } from "../../lib/context/supervisor-settings.ts";
 import { afterEach, expect, it, vi } from "vitest";
-import extension, { JEV_ENTRY, JEV_REVIEW } from "../../extensions/40-state/jev-knowledge-audit.ts";
+import extension, { JEV_ENTRY, JEV_REVIEW } from "../../../extensions/jev-knowledge-audit/extension.ts";
 import { jevAuditEnabled } from "../../lib/context/jev-audit-mode.ts";
 const original = { vault: process.env.PI_SWARM_JEV_VAULT, key: process.env.TYPESAFE_API_KEY, enabled: process.env.PI_SWARM_JEV_AUDIT, child: process.env.PI_SWARM_SUBAGENT };
 afterEach(() => { for (const [key, value] of Object.entries({ PI_SWARM_JEV_VAULT: original.vault, TYPESAFE_API_KEY: original.key, PI_SWARM_JEV_AUDIT: original.enabled, PI_SWARM_SUBAGENT: original.child })) { if (value === undefined) delete process.env[key]; else process.env[key] = value; } });

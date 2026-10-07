@@ -9,8 +9,8 @@ not a runtime import: `vendor/` is read-only under `AGENTS.md`.
 
 ## Evidence and constraints
 
-- Pi assembles context at `before_agent_start` in `.pi/extensions/10-context/swarm-prompt.ts:424-466`.
-- Existing memory is append-only, redacted, and workspace/session-scoped in `.pi/extensions/40-state/memory-history.ts:4-145`, but has no correction/deletion/staleness model.
+- Pi assembles context at `before_agent_start` in `extensions/swarm-prompt/extension.ts:424-466`.
+- Existing memory is append-only, redacted, and workspace/session-scoped in `extensions/memory-history/extension.ts:4-145`, but has no correction/deletion/staleness model.
 - Page-Index Markdown parsing is reusable at `vendor/page-index/pageindex/page_index_md.py:32-89,192-303`; it builds heading trees with line locations and optional LLM summaries.
 - Page-Index persistence is atomic JSON with a manifest and per-document files at `vendor/page-index/pageindex/local_store.py:15-25,73-186`.
 - Page-Index local retrieval is agentic tree browsing, not vector ranking, at `vendor/page-index/pageindex/agent_tools.py:901-1120` and `vendor/page-index/pageindex/local_chat.py:621-641,953-975`.
@@ -148,7 +148,7 @@ Every implementation phase must report exact files changed, commands run, fixtur
 | --- | --- |
 | Tree, provenance, hashes, tombstones, append/update | `.pi/lib/context/page-index-memory.ts` |
 | Outline/read gate, budget, bottom-up summary plan, model choice | `.pi/lib/context/context-retrieval.ts` |
-| Tools, retriever + summary prompts, footer, `/swarm-context` | `.pi/extensions/10-context/swarm-context.ts` |
+| Tools, retriever + summary prompts, footer, `/swarm-context` | `extensions/swarm-context/extension.ts` |
 
 **Tool surface:** `context_remember`, `context_index`, `context_search`, `context_outline`, `context_reindex`, `context_inspect`, `context_delete`.
 

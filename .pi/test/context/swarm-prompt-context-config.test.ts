@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFil
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadPromptContextConfig, pathInsideWorkspace, savePromptContextConfig } from "../../lib/context/swarm-prompt-context-config.ts";
-import { applyPromptContextConfig, openPromptContextConfigure } from "../../extensions/10-context/prompt-context-configure.ts";
+import { applyPromptContextConfig, openPromptContextConfigure } from "../../../extensions/prompt-context-configure/extension.ts";
 
 const workspace = () => mkdtempSync(join(tmpdir(), "pi-prompt-context-"));
 

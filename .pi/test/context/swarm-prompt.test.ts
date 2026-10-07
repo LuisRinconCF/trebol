@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { FIRST_RESPONSE_EXPLANATION_CHECK, FOOTER_EXPLANATION_PROMPT, footerExplanationRequested, MAIN_REPORTING_DIRECTIVE, TESTING_CONTRACT, SWARM_FLOW_GUIDANCE, assembleForgePrompt, comparePromptGolden, currentContextBlocks, fetchWorkspaceExtensions, forgeSwarmSystemPrompt, renderWorkspaceContext, swarmForgeSystemPrompt } from "../../extensions/10-context/swarm-prompt";
+import { FIRST_RESPONSE_EXPLANATION_CHECK, FOOTER_EXPLANATION_PROMPT, footerExplanationRequested, MAIN_REPORTING_DIRECTIVE, TESTING_CONTRACT, SWARM_FLOW_GUIDANCE, assembleForgePrompt, comparePromptGolden, currentContextBlocks, fetchWorkspaceExtensions, forgeSwarmSystemPrompt, renderWorkspaceContext, swarmForgeSystemPrompt } from "../../../extensions/swarm-prompt/extension";
 
 describe("Forge prompt assembly", () => {
   it("targets a natural footer explanation without affecting unrelated questions", () => {
@@ -65,7 +65,9 @@ describe("Forge prompt assembly", () => {
     process.env.HOME = "/tmp/ws-tui/scratch/swarm-home"; process.env.SHELL = "/bin/bash";
     try {
       const result = assembleForgePrompt("", { cwd, interactive: true, swarmFlowAvailable: true });
+      expect(result.prompt).toContain(`<operating_system>${process.platform}</operating_system>`);
       const mask = (text: string) => text
+        .replace(/<operating_system>[^<]*<\/operating_system>/, "<os/>")
         .replace(/<context name="gitStatus">[\s\S]*?<\/context>/, "<git/>")
         .replace(/<context name="currentDate">[\s\S]*?<\/context>/, "<date/>")
         .replace(/<current_working_directory>[^<]*<\/current_working_directory>/, "<cwd/>")

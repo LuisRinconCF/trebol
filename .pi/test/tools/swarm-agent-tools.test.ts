@@ -5,7 +5,7 @@ import { basename, join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { AgentManager, type Runner } from "../../../packages/tools/agents/src/index.ts";
 import { SwarmAgentTools } from "../../lib/tools/swarm-agent-tools.ts";
-import { registerSwarmAgentTools } from "../../extensions/30-tools/swarm-agent-tools.ts";
+import { registerSwarmAgentTools } from "../../../extensions/swarm-agent-tools/extension.ts";
 import { TOOL_CONTRACTS } from "../../lib/runtime/tool-contracts.ts";
 
 const root = resolve(import.meta.dirname, "../../..");
@@ -202,4 +202,16 @@ describe("Swarm agent orchestration tools", () => {
     await expect(answer).resolves.toBe("main");
     d.resolve("done");
   });
+});
+
+it("reuses a pre-registered manager and registers both tool families only once", async () => {
+  const { default: extension } = await import("../../../extensions/swarm-agent-tools/extension.ts");
+  const manager = new AgentManager({ runner: async () => "ok" });
+  const tools: any[] = [];
+  const pi: any = { registerTool: (tool: any) => tools.push(tool), on: () => {} };
+  registerSwarmAgentTools(pi, { manager });
+  extension(pi); extension(pi);
+  expect(pi[Symbol.for("pi-swarm.agent-manager")]).toBe(manager);
+  expect(tools.filter(tool => tool.name === "Agent")).toHaveLength(1);
+  expect(tools.filter(tool => tool.name === "BackgroundTask")).toHaveLength(1);
 });

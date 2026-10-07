@@ -10,12 +10,13 @@ export interface BootstrapSettingsAccess {
   error(message: string): void;
 }
 export function installBootstrapSettings(SettingsList: any, access: BootstrapSettingsAccess): () => void {
-  const proto = SettingsList.prototype;
+  const proto = SettingsList?.prototype;
+  if (!proto || typeof proto.render !== "function") return () => {};
   let state = proto[marker];
   if (!state) {
-    state = { access: undefined as BootstrapSettingsAccess | undefined, original: proto.render };
-    Object.defineProperty(proto, marker, { value: state });
-    proto.render = function(width: number) {
+    state = { access: undefined as BootstrapSettingsAccess | undefined, original: proto.render, patched: undefined as any, lists: new Set<any>() };
+    Object.defineProperty(proto, marker, { value: state, configurable: true });
+    state.patched = proto.render = function(width: number) {
       const active = state.access;
       // Only Pi's top-level settings list, not other extension lists/submenus.
       if (active && Array.isArray(this.items) && this.items.some((x: any) => x.id === "autocompact") && this.items.some((x: any) => x.id === "steering-mode") && !this.items.some((x: any) => x.id === itemId)) {
@@ -31,6 +32,7 @@ export function installBootstrapSettings(SettingsList: any, access: BootstrapSet
               }, () => done(), { enableSearch: true });
           },
         };
+        state.lists.add(this);
         this.items.unshift(item);
         if (this.filteredItems !== this.items && Array.isArray(this.filteredItems)) this.filteredItems.unshift(item);
       }
@@ -38,5 +40,19 @@ export function installBootstrapSettings(SettingsList: any, access: BootstrapSet
     };
   }
   state.access = access;
-  return () => { if (state.access === access) state.access = undefined; };
+  return () => {
+    if (state.access !== access) return;
+    state.access = undefined;
+    // Re-read current host arrays; the host may replace them between renders.
+    for (const list of state.lists) {
+      for (const items of new Set([list.items, list.filteredItems])) {
+        if (!Array.isArray(items)) continue;
+        for (let i = items.length - 1; i >= 0; i--) if (items[i]?.id === itemId) items.splice(i, 1);
+      }
+    }
+    state.lists.clear();
+    // Do not overwrite a patch installed after ours. Its chain may still call
+    // this now-inert wrapper; retain the marker in that case.
+    if (proto.render === state.patched) { proto.render = state.original; delete proto[marker]; }
+  };
 }

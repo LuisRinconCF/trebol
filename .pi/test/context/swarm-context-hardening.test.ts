@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ContextIndex, MAX_SOURCE_CHARS, MAX_SOURCE_NODES, SUMMARY_LIMIT } from "../../lib/context/page-index-memory.ts";
-import swarmContextExtension from "../../extensions/10-context/swarm-context.ts";
+import swarmContextExtension from "../../../extensions/swarm-context/extension.ts";
 
 const SCOPE = { workspace: "/repo", session: "s" };
 

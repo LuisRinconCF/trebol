@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import extension, { registerTaskManageExtension } from "../../../../.pi/extensions/30-tools/taskmanage.ts";
-import promptExtension from "../../../../.pi/extensions/10-context/swarm-prompt.ts";
-import thinkingExtension from "../../../../.pi/extensions/10-context/swarm-thinking.ts";
+import extension, { registerTaskManageExtension } from "../../../../extensions/taskmanage/extension.ts";
+import promptExtension from "../../../../extensions/swarm-prompt/extension.ts";
+import thinkingExtension from "../../../../extensions/swarm-thinking/extension.ts";
 import { taskManageSchema, InteractionBroker } from "../src/index.js";
 import { PERMISSIVE_PARAMETERS, loadSwarmToolSurface, overlaySwarmToolSchemas } from "../../../../.pi/lib/runtime/swarm-tool-surface.ts";
 import { bashCallComponent, bashResultComponent } from "../../../../.pi/lib/tools/swarm-bash.ts";
@@ -79,9 +79,9 @@ describe("root Pi TaskManage extension", () => {
     // Fields the validators refuse must not be advertised on that op.
     expect(branch("update").properties.owner_id).toBeUndefined();
     expect(branch("list").properties.include_audit).toBeUndefined();
-    // state, cleanup budget, audit + hook-correction coordinator + task-enforcement
-    // preview registration (both install a session_start handler via registerHook).
-    expect(runtime.handlers.get("session_start")).toHaveLength(5);
+    // State, cleanup, audit, correction and session-owned hook registry.
+    // Handoff registration also owns its session lifecycle.
+    expect(runtime.handlers.get("session_start")).toHaveLength(6);
     // Swarm builtin pipeline (first) + task-audit coordinator (second).
     expect(runtime.handlers.get("tool_call")).toHaveLength(2);
     expect(runtime.handlers.get("tool_result")).toHaveLength(2);

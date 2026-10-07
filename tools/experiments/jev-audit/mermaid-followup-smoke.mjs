@@ -36,7 +36,7 @@ try {
   for (const scenario of cases) {
     active = scenario; requests = [];
     const sessions = join(root, `sessions-${scenario.id}`); await mkdir(sessions);
-    const args = ['--model', 'local/script', '--no-extensions', '--extension', join(repo, '.pi/extensions/10-context/mermaid-response.ts'), '--no-tools', '--no-skills', '--no-context-files', '--session-dir', sessions, '--mode', 'json', '--print', '--approve', '--', scenario.prompt];
+    const args = ['--model', 'local/script', '--no-extensions', '--extension', join(repo, 'extensions/mermaid-response/extension.ts'), '--no-tools', '--no-skills', '--no-context-files', '--session-dir', sessions, '--mode', 'json', '--print', '--approve', '--', scenario.prompt];
     child = spawn('pi', args, { cwd: workspace, env: { ...process.env, HOME: root, PI_CODING_AGENT_DIR: agent, PI_OFFLINE: '1' }, stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '', stderr = '';
     child.stdout.on('data', b => stdout += b); child.stderr.on('data', b => stderr += b);

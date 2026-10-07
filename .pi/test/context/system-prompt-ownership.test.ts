@@ -2,14 +2,14 @@ import { describe, expect, it } from "vitest";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import promptExtension from "../../extensions/10-context/swarm-prompt.ts";
+import promptExtension from "../../../extensions/swarm-prompt/extension.ts";
 import systemPromptsExtension, {
   FORGE_PROMPT,
   PI_DEFAULT_PROMPT,
   resolveActiveSystemPrompt,
   savePromptStore,
-} from "../../extensions/10-context/system-prompts.ts";
-import { registerSystemInspector } from "../../extensions/10-context/system-inspector.ts";
+} from "../../../extensions/system-prompts/extension.ts";
+import { registerSystemInspector } from "../../../extensions/system-inspector/extension.ts";
 import { writeBootstrapSettings } from "../../../packages/runtime/bootstrap/src/store.ts";
 
 function fakePi() {
@@ -28,6 +28,15 @@ function fakePi() {
 }
 
 describe("system-prompt ownership", () => {
+  it("inspects the actual checkout and flat manifest after relocation", async () => {
+    let command: any; let output = "";
+    registerSystemInspector({ registerCommand: (_name: string, spec: any) => { command = spec; } });
+    await command.handler("", { cwd: process.cwd(), ui: { editor: async (_title: string, text: string) => { output = text; } } });
+    expect(output).toContain("@pi-swarm/core (packages/runtime/core)");
+    expect(output).toContain("mcp-fallback");
+    expect(output).toContain("swarm-agent-tools");
+    expect(output).not.toContain("00-runtime/");
+  });
   it("keeps mutation in swarm-prompt while system-prompts is UI-only", () => {
     const prompt = fakePi();
     const picker = fakePi();

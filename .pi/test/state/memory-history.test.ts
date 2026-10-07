@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MemoryHistory, MEMORY_ENTRY_TYPE, redact, scopeOf } from "../../extensions/40-state/memory-history.ts";
+import { MemoryHistory, MEMORY_ENTRY_TYPE, redact, scopeOf } from "../../../extensions/memory-history/extension.ts";
 
 describe("durable memory history", () => {
   it("redacts credentials before persistence", () => {

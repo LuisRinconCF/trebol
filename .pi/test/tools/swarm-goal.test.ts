@@ -6,7 +6,7 @@ function harness(evaluate: any = async () => "MET") {
   const ctx = { ui: { notify: vi.fn() }, sessionManager: { getBranch: () => [] } };
   const pi = { registerTool: (t: any) => tools.set(t.name, t), registerCommand: (n: string, c: any) => commands.set(n, c), on: (n: string, h: any) => handlers.set(n, [...handlers.get(n) ?? [], h]), sendMessage: vi.fn(), appendEntry: vi.fn() };
   const api = registerSwarmGoal(pi, { evaluate });
-  return { pi, api, ctx, tool: (p: any) => tools.get("scheduler").execute("test", p), command: (n: string, args: string) => commands.get(n).handler(args, ctx), emit: async (n: string, e: any = {}) => { for (const h of handlers.get(n) ?? []) await h(e, ctx); } };
+  return { pi, api, ctx, tool: (p: any) => tools.get("scheduler").execute("test", p), command: (n: string, args: string) => commands.get(n).handler(args, ctx), emit: async (n: string, e: any = {}) => { let result: any; for (const h of handlers.get(n) ?? []) { const next = await h(n === "agent_before_settle" ? { outcome: "completed", continue: false, entries: [], context: { canContinue: true, contextMessages: e.messages ?? [] }, ...e } : e, ctx); if (next) result = next; } return result; } };
 }
 afterEach(() => vi.useRealTimers());
 describe("swarm-goal", () => {
@@ -41,13 +41,14 @@ describe("swarm-goal", () => {
     const evaluate = vi.fn(async (_c: string, path: string) => { seen.push({ path, content: readFileSync(path, "utf8") }); return verdicts[seen.length - 1]; });
     const h = harness(evaluate);
     await h.command("goal", "verify result");
-    await h.emit("agent_settled", { messages: [{ role: "toolResult", toolName: "Bash", content: "observed" }] });
-    expect(h.pi.sendMessage).toHaveBeenCalledTimes(2); expect(seen[0].content).toContain("observed");
+    const continuation = await h.emit("agent_before_settle", { messages: [{ role: "toolResult", toolName: "Bash", content: "observed" }] });
+    expect(continuation.continue).toBe(true); expect(continuation.entries[0].content).toContain("NOT_MET");
+    expect(h.pi.sendMessage).toHaveBeenCalledTimes(1); expect(seen[0].content).toContain("observed");
     expect(existsSync(seen[0].path)).toBe(false); // temp file removed after evaluation
-    await h.emit("agent_settled", { messages: [] }); expect(h.api.getGoal()?.status).toBe("met");
+    await h.emit("agent_before_settle", { messages: [] }); expect(h.api.getGoal()?.status).toBe("met");
     // Large transcripts are written in full — no truncation, no size failure.
     await h.command("goal", "new goal");
-    await h.emit("agent_settled", { messages: [{ role: "toolResult", content: "x".repeat(200_000) }, { role: "toolResult", content: "recent evidence" }] });
+    await h.emit("agent_before_settle", { messages: [{ role: "toolResult", content: "x".repeat(200_000) }, { role: "toolResult", content: "recent evidence" }] });
     expect(h.api.getGoal()?.status).toBe("met");
     expect(seen[2].content).toContain("recent evidence");
     expect(seen[2].content.length).toBeGreaterThan(200_000);
@@ -59,7 +60,7 @@ describe("swarm-goal", () => {
     const evaluate = vi.fn(async (_c: string, path: string) => { seen.push({ path, mode: statSync(path).mode & 0o777 }); return "MET"; });
     const h = harness(evaluate);
     await h.command("goal", "verify");
-    await h.emit("agent_settled", { messages: [{ role: "toolResult", content: "secret token" }] });
+    await h.emit("agent_before_settle", { messages: [{ role: "toolResult", content: "secret token" }] });
     // Transcripts carry prompts and tool output; other local users must not read them.
     expect(seen[0].mode).toBe(0o600);
 
@@ -88,7 +89,7 @@ describe("swarm-goal", () => {
   it("clear invalidates an in-flight evaluator", async () => {
     let resolve!: Function; let invoked!: Function; const called = new Promise(r => { invoked = r; });
     const h = harness(() => { invoked(); return new Promise(r => { resolve = r; }); });
-    await h.command("goal", "work"); const pending = h.emit("agent_settled", { messages: [] }); await called;
+    await h.command("goal", "work"); const pending = h.emit("agent_before_settle", { messages: [] }); await called;
     await h.command("goal", "clear"); resolve("NOT_MET"); await pending;
     expect(h.pi.sendMessage).toHaveBeenCalledTimes(1); expect(h.api.getGoal()).toBeUndefined();
   });

@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { applyPatch, parsePatch, undoFile } from "../../lib/tools/swarm-apply-patch.ts";
 import { readImage } from "../../lib/tools/swarm-read-image.ts";
-import extension from "../../extensions/30-tools/swarm-fs-tools.ts";
+import extension from "../../../extensions/swarm-fs-tools/extension.ts";
 import { PERMISSIVE_PARAMETERS, loadSwarmToolSurface, overlaySwarmToolSchemas } from "../../lib/runtime/swarm-tool-surface.ts";
 
 const roots: string[] = [];

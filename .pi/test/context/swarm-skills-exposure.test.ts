@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { registerSwarmSkills } from "../../extensions/10-context/swarm-skills.ts";
+import { registerSwarmSkills } from "../../../extensions/swarm-skills/extension.ts";
 import { savePromptContextConfig } from "../../lib/context/swarm-prompt-context-config.ts";
 
 function makeSkill(root: string) {

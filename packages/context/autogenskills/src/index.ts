@@ -1116,13 +1116,6 @@ export class AutoSkillManager {
     }
     return;
   }
-  /** Pure preview: no counters, recovery flags, disk writes or hook execution. */
-  previewToolBlock(toolName: string): string | undefined {
-    if (this.config.mode !== "auto" || this.config.accountingExempt || !this.state.focusedTask || this.isExempt(toolName, {})) return;
-    const budget = this.state.skilled ? this.config.workingBudget : this.config.toolCallBudget;
-    if (this.state.reviewRequired || this.state.budgetCalls >= budget)
-      return "Skill budget/review gate requires a successful relevant Skill invocation. Choose Skill for this step; library management alone does not refill the budget.";
-  }
   recordSkillInvocation(name: string, version: string) {
     return this.withSkillLocks([name, "curator-state"], () => {
       this.mergeCuratorState();
@@ -1223,7 +1216,7 @@ export function registerAutoSkills(pi: any, config: Config = {}) {
   };
   const installFooter = (ctx: any) => {
     if (ctx?.mode !== "tui") return;
-    // Pi has a single footer slot, owned by .pi/extensions/50-ui/conversation-metrics.ts.
+    // Pi has a single footer slot, owned by extensions/conversation-metrics/extension.ts.
     // Contribute a segment to its shared registry instead of calling setFooter,
     // which would silently replace the metrics line (and vice versa) depending on
     // extension load order. The registry is keyed by name, so re-registration on

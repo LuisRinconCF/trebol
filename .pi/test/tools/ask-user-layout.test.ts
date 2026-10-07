@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { renderSingleSelectRows } from "../../extensions/30-tools/ask-user/single-select-layout.ts";
+import { renderSingleSelectRows } from "../../../extensions/ask-user/single-select-layout.ts";
 
 describe("renderSingleSelectRows", () => {
 	test("wraps long option titles instead of truncating them away", () => {

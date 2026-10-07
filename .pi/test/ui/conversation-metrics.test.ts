@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clampFooterRow, currentModelLabel, footerIdentityLine, footerMetricsLine, footerVisibleWidth, wrapFooterText } from "../../extensions/50-ui/conversation-metrics.ts";
+import { clampFooterRow, currentModelLabel, footerIdentityLine, footerMetricsLine, footerVisibleWidth, wrapFooterText } from "../../../extensions/conversation-metrics/extension.ts";
 
 describe("conversation metrics footer", () => {
   it("reports provider and model", () => {

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import memoryHistoryExtension from "../../extensions/40-state/memory-history.ts";
+import memoryHistoryExtension from "../../../extensions/memory-history/extension.ts";
 import { rememberShared } from "../../lib/state/shared-memory.ts";
 import { openKnowledgeStore } from "../../lib/state/knowledge-store.ts";
 

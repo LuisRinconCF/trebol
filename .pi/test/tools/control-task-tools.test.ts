@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { registerControlTaskTools } from "../../extensions/30-tools/control-task-tools.ts";
+import { registerControlTaskTools } from "../../../extensions/control-task-tools/extension.ts";
 
 describe("Pi control-task tools", () => {
   it("leaves goal_create ownership to the reviewed goal-loop adapter", () => {

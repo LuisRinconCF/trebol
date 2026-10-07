@@ -11,11 +11,11 @@ Do not transfer, close, or edit historical GitHub issues during this work.
 ## Observed implementation
 
 - `.pi/lib/tools/swarm-annoyed-publish.ts:19-26` defaults to `Swarm-Code/mono`.
-- `.pi/extensions/30-tools/annoyed/index.ts:27-51` persists locally before an
+- `extensions/annoyed/extension.ts:27-51` persists locally before an
   unconditional GitHub POST; local dedup does not prevent duplicate publication.
 - `.pi/lib/tools/swarm-annoyed.contract.ts:4-7` overlays registration wording and
   incorrectly promises a published transcript; actual issue bodies omit it.
-- `.pi/extensions/30-tools/annoyed/store.ts:141-169` merges fingerprints globally;
+- `extensions/annoyed/store.ts:141-169` merges fingerprints globally;
   repeated upserts replace metadata, so publication receipts need deliberate preservation.
 - `.pi/lib/context/context-consult.ts:18-45` already provides an isolated tool-less,
   timeout-limited Pi consultation inheriting an explicitly supplied session model.

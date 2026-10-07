@@ -63,7 +63,7 @@ if(method==='GET'){let item=JSON.parse(fs.readFileSync(process.env.FIXTURE_ISSUE
 `);
   const {chmod}=await import('node:fs/promises'); await chmod(fakeGh,0o755);
   const env={...process.env,HOME:home,PI_CODING_AGENT_DIR:agent,PI_OFFLINE:'1',SWARM_ANNOYED_JUDGE:'local/script',SWARM_ANNOYED_REPOSITORY:'cloverinternational/trebol',PATH:`${fakeBin}:${process.env.PATH}`,FAKE_GH_LOG:join(root,'gh.jsonl'),PI_SWARM_NO_HOOKS:'1'};
-  const extension=join(repo,'.pi/extensions/30-tools/annoyed/index.ts');
+  const extension=join(repo,'extensions/annoyed/extension.ts');
   const startup=await new Promise((ok,bad)=>{const c=spawn('pi',['--mode','json','--provider','local','--model','script','--no-extensions','--print','--','startup probe'],{cwd:workspace,env,stdio:['ignore','pipe','pipe']});let out='',err='';c.stdout.on('data',b=>out+=b);c.stderr.on('data',b=>err+=b);c.once('error',bad);c.once('exit',code=>code===0?ok({out,err}):bad(new Error(`provider startup failed ${code}: ${err}`))) });
   console.log(JSON.stringify({providerStartup:true}));
   const invoke=async(id,{remote=true,twice=false}={})=>{

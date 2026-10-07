@@ -13,7 +13,7 @@ vi.mock("@earendil-works/pi-tui", () => ({
     render() { return [this.value]; } },
   Markdown: class { constructor(private readonly text: string) {} render() { return [this.text]; } },
 }));
-import { BtwView } from "../../extensions/50-ui/swarm-btw.ts";
+import { BtwView } from "../../../extensions/swarm-btw/extension.ts";
 
 const theme = { fg: (_color: string, text: string) => text, bold: (text: string) => text, dim: (text: string) => text };
 

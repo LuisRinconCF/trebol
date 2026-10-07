@@ -23,7 +23,7 @@ not explicitly preserve the approved/edited plan for subsequent enforcement.
     invalid-state behavior.
   - Preserve workspace containment, symlink, regular-file, UTF-8, and size
     protections.
-- `.pi/extensions/10-context/swarm-plan-mode.ts`
+- `extensions/swarm-plan-mode/extension.ts`
   - Persist complete lifecycle snapshots at the correct transition points.
   - Restore the latest valid snapshot without duplicating prompt guidance or
     incorrectly re-triggering first-tool behavior.
