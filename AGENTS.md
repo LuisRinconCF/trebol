@@ -92,7 +92,7 @@ path, and preserve native tools and unrelated extensions while disabled.
 | `docs/reference/` | Contracts, inventories, and operational references. |
 | `docs/parity/` | Parity plan, acceptance record, and VHS media. |
 | `docs/plans/{active,archive}/` | Plans still driving work; executed plans headed with what superseded them. |
-| `infra/` | `postgres/` compose stack, `bridges-go/` Go bridge. |
+| `infra/` | `postgres/` optional development compose fixture; not required by Pi. |
 | `vendor/` | Read-only references: `pi-mono`, `swarm-sdk`, and the `opencode` and `page-index` submodules. Never edited and never imported at runtime. |
 | `artifacts/` | Ignored. Recordings and experiment outputs (e.g. `artifacts/tool-cards/`). |
 | `.swarm/`, `.pi/agent-sessions/` | Ignored runtime state; never a source of truth for implementation. |
@@ -215,7 +215,8 @@ capabilities and shared policy over duplicate tools or parallel global state.
 Use this section when a user names a tool, skill, or hook. Start at the public
 Pi extension, then follow its imported package/library. Keep the extension
 thin: execution/domain logic belongs in the package or `.pi/lib/`, policy
-belongs in `packages/policy/policy`, and rendering belongs in the extension/render bridge.
+belongs at the actual host/tool execution boundary, and rendering belongs in the extension/render bridge.
+`packages/policy/policy` is currently an unwired library, not the live authority.
 
 ### Tools by user-facing name
 
@@ -223,7 +224,7 @@ belongs in `packages/policy/policy`, and rendering belongs in the extension/rend
 | --- | --- | --- |
 | `bash` | `extensions/swarm-bash/extension.ts` | `.pi/lib/tools/swarm-bash.ts`; policy must gate execution separately. |
 | `Read`, `apply_patch`, `Undo` | `extensions/swarm-fs-tools/extension.ts` | `.pi/lib/tools/swarm-apply-patch.ts`, `.pi/lib/tools/swarm-read-image.ts`; filesystem boundary is an explicit decoupling seam. |
-| `Agent`, `AgentControl` | `extensions/swarm-agent-tools/extension.ts` | `packages/tools/agents/src/index.ts`, `packages/tools/agents/src/general-agent-adapter.ts`; child runner/session isolation lives in `packages/tools/agents`. |
+| `Agent`, `AgentControl` | `extensions/swarm-agent-tools/extension.ts` | `packages/tools/agents/src/index.ts`; child runner/session isolation lives in `packages/tools/agents`. |
 | `task_create`, `task_update`, `task_get`, `task_list`, `task_delete`, `task_claim`, `task_note`, `task_plan`, `task_complete`, `task_reopen`, `task_block`, `task_unblock`, `task_focus`, `task_unfocus`, `task_status`, `run_status` | `extensions/taskmanage/extension.ts`, `extensions/control-task-tools/extension.ts` | `packages/tools/taskmanage/src/task-manage.ts`, `packages/tools/taskmanage/src/workflow.ts`, `packages/tools/taskmanage/src/persistence.ts`, `packages/runtime/runtime-contracts/src/control-task.ts`; do not duplicate task state in extensions. |
 | `HistorySearch`, `HistoryGet` | `extensions/swarm-history-vault-tools/extension.ts` and `extensions/history-search/extension.ts` | `.pi/lib/tools/swarm-history-tools.ts` with shared `history-reader.ts`, `history-matching.ts`, and `history-admission.ts`; streaming history is read-only, resource-budgeted, redacted, and reports incomplete scans. See `docs/reference/history-search.md`. |
 | `memory_history` | `extensions/memory-history/extension.ts` | `.pi/lib/state/shared-memory.ts`: repository-default immutable records under `~/.swarm/memory` (override `PI_SWARM_MEMORY_DIR`), Git-common-dir repository identity, worktree overlay and explicit global scope. Legacy session scope remains readable. Redact before writes. |
@@ -432,7 +433,7 @@ are separate seams and should remain decoupled.
 
 | Package | Primary source files | Change here when… |
 | --- | --- | --- |
-| `packages/tools/agents` | `packages/tools/agents/src/index.ts`, `general-agent-adapter.ts`, `worker-daemon.ts`, `absurd-control-plane.ts` | Agent identity, runner, cancellation, concurrency, or child sessions change. |
+| `packages/tools/agents` | `packages/tools/agents/src/index.ts` | Agent identity, runner, cancellation, concurrency, or child sessions change. |
 | `packages/context/autogenskills` | `packages/context/autogenskills/src/index.ts` | Skill curation, locking, budgets, revision history, or review policy changes. |
 | `packages/tools/mcp` | `packages/tools/mcp/src/index.ts` | MCP manifests, transports, discovery, tool allowlists, or auth change. |
 | `packages/policy/policy` | `packages/policy/policy/src/policy.ts`, `packages/policy/policy/src/index.ts` | Authorization, workspace/mutation/network boundaries, or fail-closed rules change. |
@@ -453,16 +454,17 @@ the package/extension boundary.
 
 - `packages/context/prompt` owns prompt precedence, workspace context, and non-secret
   provenance; chain `event.systemPrompt` instead of overwriting blindly.
-- `packages/policy/policy` owns final fail-closed authorization. Tool registration or a prompt
-  instruction is not authorization.
+- `packages/policy/policy` is a standalone policy prototype with unit tests, not a wired
+  authorization boundary. Tool registration or a prompt instruction is not authorization.
 - `packages/tools/taskmanage`, `packages/tools/agents`, `history-search`, and `memory-history` own their
   respective durable workflows; use stable IDs and bounded outputs.
-- `packages/runtime/core` owns shared runtime identity/lifecycle; extensions must not each
-  invent global identity or duplicate lifecycle state.
+- `packages/runtime/core` supplies the actively used tool renderer. Its identity/journal/
+  runtime classes currently have only test consumers; Pi owns native session lifecycle.
 - `packages/context/skills`, `packages/context/autogenskills`, `packages/tools/mcp`, and `packages/tools/schedule` provide opt-in capability
   layers; do not make ambient discovery silently widen a closed profile.
-- `packages/runtime/contract` and `packages/runtime/runtime-contracts` define interfaces consumed by
-  multiple packages; change them deliberately and update all consumers/tests.
+- `packages/runtime/contract` currently has only test consumers.
+  `packages/runtime/runtime-contracts` mixes active RPC/contracts with store/adapter
+  implementations; audit imports before splitting it. Do not assume its barrel is type-only.
 - Import direction is fixed by who runs the code. `.pi/` imports package
   sources by relative path (`../../../packages/<layer>/<name>/src/index.ts`):
   Pi loads extensions through jiti with plain Node resolution and no build
@@ -886,3 +888,8 @@ identity and preserved host-adapter constraints. Install source parsing shares
 one Git identity parser with doctor; migration preview covers top-level extension
 paths as well as package filters. Host lookup supports Windows npm shim layout
 with suffix tests; live Windows verification remains separate.
+
+Optional, unfinished daemon adapters live in `packages/experimental/absurd-worker`,
+not the local agent import graph. Build them with `npm run build:experimental`.
+The unshipped Go transport lives in `experiments/bridges-go`; it is not a daemon.
+`test:integration` deliberately fails until a real Postgres acceptance test exists.

@@ -1,6 +1,10 @@
 # Absurd + Pi integration contract
 
-Verified 2026-09-05 against npm and the checked-in `vendor/pi-mono` snapshot.
+Historical SDK design notes (2026-09-05), not a certification of the current host or a deployed daemon.
+
+**Current status:** experimental libraries only. No runnable production daemon
+assembly or live database acceptance suite is provided. Local Pi agents do not
+import these adapters. See `packages/experimental/absurd-worker/README.md`.
 
 ## Absurd SDK
 
@@ -39,7 +43,7 @@ already ends at a resumable boundary; otherwise start a new prompt with
 
 See `packages/runtime/runtime-contracts/src/general-agent.ts` for the narrow typed task,
 checkpoint, runtime, status, and tool request/response contracts. The minimal
-worker is `packages/tools/agents/src/worker-daemon.ts`: it registers only the general-agent
+worker is `packages/experimental/absurd-worker/src/worker-daemon.ts`: it registers only the general-agent
 task, starts Absurd with concurrency one, reports health, and closes its worker
 and client on shutdown. Its runtime factory is injectable for offline tests.
 The transport-neutral control/task tool contract is in
@@ -69,11 +73,23 @@ model-callable as `goal_*` and `loop_*` tools with closed JSON schemas.
 
 Every unattended Absurd/Pi worker must receive an explicit reviewed policy: absolute workspace boundary; closed tool allowlist; network disabled unless hosts are allowlisted; mutations denied unless approval permits them; credentials limited to named environment variables; bounded attempts, tokens, cost, timeout, and output; and recursion depth/child-count limits. Missing fields fail closed. Enforcement belongs to the host/executor, not prompts, tool registration, or the control panel.
 
-The durable production path is Absurd backed by Postgres. In-process and file implementations are test/fallback adapters only; no SQLite production storage is added. Recovery tests use fake/in-process or temporary file state. Optional live integration validation can be enabled with PI_SWARM_POSTGRES_URL and npm run test:integration; it is not run or claimed by default.
+The intended durable task backend is Absurd/Postgres. However,
+`AbsurdControlPlane` keeps agents, jobs, idempotency keys and events in memory;
+it is not restart-safe. Unit tests use fakes or temporary file state.
+`npm run test:integration` currently exits nonzero with NOT IMPLEMENTED,
+regardless of database environment variables. It must not be counted as a
+passing integration check.
 
-## Operator quick start
+## Deployment gaps
 
-Configure Postgres and the Absurd schema/queue, set ABSURD_QUEUE, construct a reviewed autonomy policy, then start the daemon/worker with one stable worker identity. Use /goal for reviewed done-when work; it stays queued until /goal resume. Use /loop for bounded cadence and continuation; pause/stop are explicit. The control panel is read-only status and never an approval or mutation authority.
+The daemon RPC client exists and reports unavailable services rather than
+silently selecting a file/in-process backend. The repository does not currently
+provide the complete service composition connecting it to these experimental
+workers. Authentication/authorization, reviewed host policy enforcement, durable
+control-plane metadata, and recovery acceptance tests must be implemented and
+verified before a production quick start is appropriate.
 
-## Production path
-Pi tools use DaemonRpcClient over authenticated Unix-socket JSON-RPC. The daemon owns authorization, idempotency, ownership, and lifecycle; production execution is AbsurdControlPlane plus Postgres and createWorkerDaemon. No FileControlPlane or in-process fallback is wired in production. DaemonUnavailableError is surfaced visibly. Absurd task headers carry job and owner-session identity; TaskContext.step checkpoints message/turn boundaries for retry resume.
+`infra/postgres` is an optional development fixture, not a Pi installation
+requirement. A caller must pass a database connection as the worker's `db`
+option; `ABSURD_DATABASE_URL` is an operator convention, not automatically read
+by the worker. `ABSURD_QUEUE` is read as its default queue name.

@@ -1,6 +1,8 @@
-# Immutable runtime profiles
+# Immutable runtime profiles (unwired library)
 
-`swarm-contract` provides a small, offline-safe policy seam for Pi extensions.
+`packages/runtime/contract` provides an offline profile library. The current
+repository consumer audit found unit tests, not production call sites. This is
+not evidence that live extension tools enforce these profiles.
 `createRuntimeProfile` copies, de-duplicates, sorts, and freezes allowlists for
 tools, skills, hooks, MCP servers, and capabilities. It also records context
 file names, provider/model identity, prompt hash, and package provenance, then

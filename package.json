@@ -75,7 +75,8 @@
     "doctor": "node tools/install/doctor.mjs",
     "dogfood": "npm run build && npm test",
     "check:install": "node tools/install/check-load.mjs",
-    "check:extension-parity": "node tools/install/extension-inventory.mjs --compare docs/parity/extension-surface-before.json --surface-only"
+    "check:extension-parity": "node tools/install/extension-inventory.mjs --compare docs/parity/extension-surface-before.json --surface-only",
+    "build:experimental": "npm run build:runtime && npm run build -w @pi-swarm/experimental-absurd-worker"
   },
   "workspaces": [
     "packages/*/*"

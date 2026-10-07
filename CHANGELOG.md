@@ -4,6 +4,8 @@ Release metadata is kept in `package.json`, `update-manifest.json`, and this fil
 
 ## [Unreleased]
 
+- Isolate experimental Absurd workers from local agent imports, quarantine the unshipped Go bridge, and reject placeholder integration checks instead of reporting success.
+
 - Flatten Pi extensions into individually selectable entries, preserve the tool surface, adopt native settlement/continuation, scope compatibility handlers, and repair macOS PTY execution and installation diagnostics.
 
 - Add an open issue triage script under `tools/experiments` for batching repository issue review.
