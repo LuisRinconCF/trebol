@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readdir } from "node:fs/promises";
-import { registerControlPanel } from "../../../../.pi/extensions/50-ui/control-panel.ts";
+import { registerControlPanel } from "../../../../extensions/control-panel/extension.ts";
 import { InProcessControlPlane } from "../src/control-plane.ts";
 
 describe("control panel adapter", () => {
@@ -23,7 +23,7 @@ describe("control panel adapter", () => {
   });
 
   it("keeps test modules out of Pi's extension discovery directory", async () => {
-    const entries = await readdir(new URL("../../../../.pi/extensions/", import.meta.url));
+    const entries = await readdir(new URL("../../../../extensions/", import.meta.url));
     expect(entries.filter((entry) => entry.endsWith(".test.ts"))).toEqual([]);
   });
 });

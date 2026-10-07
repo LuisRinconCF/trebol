@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 describe("Pi hooks extension", () => {
   it("does not re-register Pi built-in tools", () => {
     const source = readFileSync(
-      fileURLToPath(new URL("../../extensions/00-runtime/hooks.ts", import.meta.url)),
+      fileURLToPath(new URL("../../../extensions/hooks/extension.ts", import.meta.url)),
       "utf8",
     );
 

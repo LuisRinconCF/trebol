@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildMetadataView, metadataRequestBody, parseGeneratedMetadata, refreshConversationMetadata, truncateMetadataText, type MetadataState } from "../../lib/state/swarm-conversation-metadata.ts";
-import { transcriptOf } from "../../extensions/40-state/swarm-conversation-metadata.ts";
+import { transcriptOf } from "../../../extensions/swarm-conversation-metadata/extension.ts";
 
 describe("conversation metadata (client/conversation_metadata.go)", () => {
   const messages = transcriptOf([

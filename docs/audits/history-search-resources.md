@@ -2,7 +2,7 @@
 
 ## Confirmed allocation/control-flow defects
 
-References below use `S` = `.pi/lib/tools/swarm-history-tools.ts`, `E` = `.pi/extensions/30-tools/history-search.ts`, `A` = `.pi/extensions/30-tools/swarm-history-vault-tools.ts`.
+References below use `S` = `.pi/lib/tools/swarm-history-tools.ts`, `E` = `extensions/history-search/extension.ts`, `A` = `extensions/swarm-history-vault-tools/extension.ts`.
 
 | Priority | Finding | Evidence |
 | --- | --- | --- |

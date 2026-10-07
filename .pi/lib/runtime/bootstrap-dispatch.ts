@@ -5,15 +5,39 @@ import { dispatchRegisteredHook } from "./hook-state.ts";
 // Adapters replace their registration on reload; this does not create managers.
 // Pi loads extensions in separate jiti module graphs. Share only registrations,
 // never domain state; owning adapters refresh these definitions on each load.
-const key = Symbol.for("pi-swarm-bootstrap-handoff-tools");
-const tools: Map<string, any> = (globalThis as any)[key] ??= new Map();
-export function registerBootstrapHandoff(tool: any) {
-  if (tool.name === "Skill" || tool.name === "TaskManage") tools.set(tool.name, tool);
+const key = Symbol.for("pi-swarm-session-handoff-tools");
+const sessions: Map<string, Map<string, { owner: object; tool: any }>> = (globalThis as any)[key] ??= new Map();
+const sessionId = (ctx: any) => ctx?.sessionManager?.getSessionId?.();
+export function registerBootstrapHandoff(pi: any, tool: any) {
+  if (tool.name !== "Skill" && tool.name !== "TaskManage") return;
+  const owner = {};
+  let id: string | undefined;
+  const release = () => {
+    if (!id) return;
+    const tools = sessions.get(id);
+    if (tools?.get(tool.name)?.owner === owner) tools.delete(tool.name);
+    if (tools?.size === 0) sessions.delete(id);
+    id = undefined;
+  };
+  pi.on("session_start", (_event: any, ctx: any) => {
+    release(); id = sessionId(ctx); if (!id) return;
+    const tools = sessions.get(id) ?? new Map();
+    tools.set(tool.name, { owner, tool }); sessions.set(id, tools);
+  });
+  pi.on("session_shutdown", release);
 }
 export async function dispatchBootstrapHandoff(name: "Skill" | "TaskManage", input: any, signal: AbortSignal, ctx: any, active: string[]) {
   if (signal.aborted) throw new Error("Bootstrap cancelled");
   if (!active.includes(name)) throw new Error(`${name} is not active; bootstrap cannot widen tool permissions`);
-  const tool = tools.get(name);
+  if (typeof ctx?.executeTool === "function") {
+    const outcome = await ctx.executeTool(name, input, { signal });
+    if (signal.aborted) throw new Error("Bootstrap cancelled");
+    if (outcome.isError || outcome.result?.isError) throw new Error(outcome.result?.content?.[0]?.text || `${name} failed`);
+    return outcome.result;
+  }
+  // Lifecycle-driven supervisor reconciliation has no ExtensionToolContext.
+  // Keep its compatibility path explicit until it is moved to a host tool.
+  const tool = sessions.get(sessionId(ctx))?.get(name)?.tool;
   if (!tool) throw new Error(`${name} is unavailable for bootstrap handoff`);
   const event = { toolName: name, toolCallId: `bootstrap-${randomUUID()}`, input };
   const before = await dispatchRegisteredHook("tool_call", event, ctx);

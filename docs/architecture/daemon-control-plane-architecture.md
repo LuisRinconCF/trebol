@@ -13,7 +13,7 @@ The repository already has the right small pieces, but they are host-local:
   atomic JSON store at `.swarm/scheduled_tasks.json`, serializes mutations, and
   delivers prompts asynchronously. Its `agentId` is routing metadata, not an
   agent process or durable execution lease.
-- `.pi/extensions/30-tools/schedule.ts` binds that scheduler to one Pi runtime through
+- `extensions/schedule/extension.ts` binds that scheduler to one Pi runtime through
   `sendUserMessage(..., { deliverAs: "followUp" })`. It starts on extension
   load and stops on `session_shutdown`; it must not become the daemon.
 - `taskmanage` is a Pi journal adapter for the upstream task contract. It
@@ -328,7 +328,7 @@ redaction.
 ## References audited
 
 - `packages/tools/schedule/src/{cron,index,scheduler,store,tools,types}.ts`
-- `.pi/extensions/30-tools/schedule.ts`
+- `extensions/schedule/extension.ts`
 - `docs/reference/taskmanage-reference-contract.md`,
   `docs/reference/taskmanage-workflows.md`, and `packages/tools/taskmanage/src/task-manage.ts`
 - `packages/runtime/runtime-contracts/README.md`

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { repairMermaidResponse, validateMermaid } from "../../lib/context/mermaid-response.ts";
-import register from "../../extensions/10-context/mermaid-response.ts";
+import register from "../../../extensions/mermaid-response/extension.ts";
 
 const bad = "```mermaid\nflowchart TD\nA -- > B\n```";
 const good = "```mermaid\nflowchart TD\nA --> B\n```";

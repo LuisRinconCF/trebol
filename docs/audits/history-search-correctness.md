@@ -2,7 +2,7 @@
 
 ## Scope and method
 
-Read root `AGENTS.md` (repository operating contract; notably tool registrations live under `.pi/extensions/<layer>`, and `.pi/lib` contains shared helpers). Inspected `.pi/lib/tools/swarm-history-tools.ts`, its public contracts in `.pi/lib/tools/swarm-history-tools.contract.ts`, registration in `.pi/extensions/30-tools/swarm-history-vault-tools.ts`, and the separate legacy `history_search` registration/engine in `.pi/extensions/30-tools/history-search.ts`. Findings below are static code review unless explicitly marked otherwise. No actual session/history files were read and no synthetic runtime probe was run.
+Read root `AGENTS.md` (repository operating contract; notably tool registrations live under `.pi/extensions/<layer>`, and `.pi/lib` contains shared helpers). Inspected `.pi/lib/tools/swarm-history-tools.ts`, its public contracts in `.pi/lib/tools/swarm-history-tools.contract.ts`, registration in `extensions/swarm-history-vault-tools/extension.ts`, and the separate legacy `history_search` registration/engine in `extensions/history-search/extension.ts`. Findings below are static code review unless explicitly marked otherwise. No actual session/history files were read and no synthetic runtime probe was run.
 
 ## Findings
 
@@ -37,7 +37,7 @@ Any segment filter or stats switches to `segmentSearch` after general fields val
 - `origin` is schema-supported but Pi cannot persist it (source header comment lines 4-6); validation exists (`:262`) but no origin filter is applied. Calls with any allowed origin therefore return unrestricted results. **Severity: Medium contract mismatch** unless explicitly documented as unsupported/no-op.
 - Search `exclude_runtime` affects only body, not title/preview (`:268-270`); this may be correct for metadata but is narrower than the contract wording “ignore runtime-injected pseudo-messages when matching message bodies.”
 - `tool_outcome` filtering excludes non-tool-result segments (`:309-312`), correctly matching its description.
-- The standalone `history_search` engine has its own schema and redaction (`.pi/extensions/30-tools/history-search.ts:34-39,95`). Its `read` checks realpath containment (`:77-81`), but its hit accumulation and per-file JSON accumulator are not bounded by result limits (`:71-91`).
+- The standalone `history_search` engine has its own schema and redaction (`extensions/history-search/extension.ts:34-39,95`). Its `read` checks realpath containment (`:77-81`), but its hit accumulation and per-file JSON accumulator are not bounded by result limits (`:71-91`).
 
 ## Verification
 

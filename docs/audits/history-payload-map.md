@@ -2,7 +2,7 @@
 
 ## Evidence scope
 
-Source review, not private transcript sampling. Pi source under vendor is a read-only reference, not a runtime import or proof of the installed host version. Definitions: `vendor/pi-mono/packages/coding-agent/src/core/session-manager.ts:32-152`; message blocks: `vendor/pi-mono/packages/ai/src/types.ts:235-313`; coding-agent extensions: `vendor/pi-mono/packages/coding-agent/src/core/messages.ts:25-83`. Local metadata persistence: `.pi/extensions/40-state/swarm-conversation-metadata.ts:44-77`.
+Source review, not private transcript sampling. Pi source under vendor is a read-only reference, not a runtime import or proof of the installed host version. Definitions: `vendor/pi-mono/packages/coding-agent/src/core/session-manager.ts:32-152`; message blocks: `vendor/pi-mono/packages/ai/src/types.ts:235-313`; coding-agent extensions: `vendor/pi-mono/packages/coding-agent/src/core/messages.ts:25-83`. Local metadata persistence: `extensions/swarm-conversation-metadata/extension.ts:44-77`.
 
 ## Dispatch hierarchy
 

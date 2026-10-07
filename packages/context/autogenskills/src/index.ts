@@ -1223,7 +1223,7 @@ export function registerAutoSkills(pi: any, config: Config = {}) {
   };
   const installFooter = (ctx: any) => {
     if (ctx?.mode !== "tui") return;
-    // Pi has a single footer slot, owned by .pi/extensions/50-ui/conversation-metrics.ts.
+    // Pi has a single footer slot, owned by extensions/conversation-metrics/extension.ts.
     // Contribute a segment to its shared registry instead of calling setFooter,
     // which would silently replace the metrics line (and vice versa) depending on
     // extension load order. The registry is keyed by name, so re-registration on

@@ -1,5 +1,4 @@
 import { executionLog } from "../context/execution-log.ts";
-import { registerCorrectionPreview } from "./hook-correction.ts";
 import { isHookEnabled, registerHook } from "./hook-state.ts";
 import { AnnoyanceNudgeState, formatHookContext, resultText } from "../policy/swarm-annoyance-nudge.ts";
 import {
@@ -112,8 +111,6 @@ export function registerSwarmBuiltinHooks(pi: Pi, options: SwarmBuiltinHookOptio
   });
   registrations.set(owner, pipeline);
   const hooks = (pipeline as any).hooks;
-  registerCorrectionPreview(pi, "taskmanage", (name) => isHookEnabled("taskmanage")
-    ? hooks.enforcement.previewBlock(name, hookTasks(), process.env.PI_SWARM_SUBAGENT === "1") : undefined);
   const postActing = hooks.postActing;
   const preContext = new Map<string, string>();
   // One cleanup opportunity per external request, not per automatic wake.

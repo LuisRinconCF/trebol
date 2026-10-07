@@ -7,6 +7,7 @@ import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { accessSync, constants, existsSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { WAIT_DELAY_MS, decodeSignalExit, signalNote, stripANSI, type BashParams } from "./swarm-bash.ts";
 import { setRunningWork } from "../ui/running-work.ts";
 
@@ -138,8 +139,11 @@ export function detectBufferingMethod(shell: string, command: string): Buffering
   if (script && process.platform === "linux") {
     return { argv: [script, "-q", "-e", "-c", `${shellQuote(shell)} -c ${shellQuote(command)}`, "/dev/null"], pty: true };
   }
-  if (script && process.platform === "darwin") {
-    return { argv: [script, "-q", "/dev/null", shell, "-c", command], pty: true };
+  if (process.platform === "darwin") {
+    // BSD script echoes EOF and loses signal status. Use an output-only PTY
+    // without feeding terminal input; keep child and runner in our process group.
+    const python = runnableOnPath("python3");
+    if (python) return { argv: [python, fileURLToPath(new URL("./pty-runner.py", import.meta.url)), shell, "-c", command], pty: true };
   }
   const stdbuf = runnableOnPath("stdbuf");
   if (stdbuf) return { argv: [stdbuf, "-oL", "-eL", shell, "-c", command], pty: false };

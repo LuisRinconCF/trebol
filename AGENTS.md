@@ -31,7 +31,7 @@ The governing separation is:
 Pi AgentSession + SessionManager
         │ lifecycle, context, provider, native tools
         ▼
-Pi ExtensionAPI (.pi/extensions/<NN-layer>/)
+Pi ExtensionAPI (extensions/<extension>/index.ts)
         │ registration, gates, persistence, rendering
         ├── 00-runtime   ── integration boundary, hook engine, tool surface, parity
         ├── 10-context   ── swarm-prompt + swarm-context, plan mode, skills
@@ -61,7 +61,7 @@ address in each tree.
 | 40 | `state` | durable session entries: memory history, conversation metadata |
 | 50 | `ui` | control panel, metrics widgets, themes, tools-status command, Pi-Swarm-owned `/btw` side-question overlay |
 
-The root `.pi/extensions/trebol-loader.ts` is always loaded and remains resident
+The root `extensions/trebol-toggle/index.ts` is always loaded and remains resident
 when the project extension pack is disabled. Each layer manifest points to its
 own `.trebol-guards/` wrapper, which dynamically imports exactly one original
 factory when the process-local `Symbol.for("pi-swarm-trebol-mode")` state is
@@ -74,7 +74,7 @@ path, and preserve native tools and unrelated extensions while disabled.
 
 | Path | Purpose |
 | --- | --- |
-| `.pi/extensions/<NN-layer>/` | Pi entrypoints. Each layer directory has a `package.json` whose `pi.extensions` list is the load order; layers load in numeric-prefix order. Pi discovers only one level deep, so a new extension must be added to its layer manifest. |
+| `extensions/<name>/` | One extension per folder. Root package.json lists enabled index.ts entrypoints explicitly. extension.ts holds implementation; index.ts preserves whole-suite toggle behavior. No numbered layers or umbrella runtime. |
 | `.pi/lib/<layer>/` | Shared extension/runtime helpers, filed by the same rule. Hook infrastructure (`hook-state`, `hook-observations`, `hook-presenter`, `hook-render-bridge`) lives in `.pi/lib/runtime/`. |
 | `.pi/test/<layer>/` | Tests for `.pi` code. A test lives in the layer of the module it primarily imports. |
 | `.pi/config/` | Project configuration: `prompt-context.json`, `swarm-settings.json`, and the ignored `api-keys.json`. |
@@ -105,9 +105,7 @@ tracked. Generated files say so in their header and name their generator.
 
 ## How Pi is composed
 
-1. Pi loads project extensions from `.pi/extensions/` one level deep: each
-   `<NN-layer>/package.json` declares its entry files under `pi.extensions`,
-   and Pi exposes the `ExtensionAPI` to each of them.
+1. Pi loads the root package manifest, which explicitly lists `extensions/<name>/index.ts`. The project `.pi/settings.json` points to the root package.
 2. Extensions register tools with `pi.registerTool`, commands with
    `pi.registerCommand`, shortcuts with `pi.registerShortcut`, and lifecycle
    handlers with `pi.on`.
@@ -125,7 +123,7 @@ tracked. Generated files say so in their header and name their generator.
 
 Important UI locations:
 
-- **Bottom/footer:** `.pi/extensions/50-ui/conversation-metrics.ts`; it calls
+- **Bottom/footer:** `extensions/conversation-metrics/extension.ts`; it calls
   `ctx.ui.setFooter(...)`, shows workspace/branch and model/state above context
   pressure, reported output tokens and accumulated active time. It uses semantic
   success/accent colors on the terminal's default background; narrow panes drop the
@@ -142,7 +140,7 @@ Important UI locations:
   a process-wide boolean: `/reload` re-evaluates modules with a fresh `pi`
   while `globalThis` survives, and a boolean guard silently skips registration.
 - **Inline hook rows:** `.pi/lib/runtime/hook-render-bridge.ts` and `.pi/lib/runtime/hook-presenter.ts`.
-- **Windows image paste:** `.pi/extensions/50-ui/swarm-image-paste.ts` with
+- **Windows image paste:** `extensions/swarm-image-paste/extension.ts` with
   `.pi/lib/ui/windows-clipboard.ts`. It registers `ctrl+v` and `/paste-image`
   on win32 only, because Pi binds `app.clipboard.pasteImage` to `alt+v` there
   and its clipboard reader falls back to PowerShell only under WSL. Extension
@@ -160,7 +158,7 @@ documents when a change alters a documented architectural boundary.
 ## AGENTS.md discovery
 
 Pi-Swarm now discovers instructions hierarchically through
-`.pi/lib/context/swarm-context.ts` and injects them through `.pi/extensions/10-context/swarm-prompt.ts`.
+`.pi/lib/context/swarm-context.ts` and injects them through `extensions/swarm-prompt/extension.ts`.
 The algorithm follows the current working directory's lexical path upward to
 the nearest `.git` directory or `.git` file, then loads one instruction file
 per directory from repository root to the working directory. If no Git root is
@@ -223,31 +221,31 @@ belongs in `packages/policy/policy`, and rendering belongs in the extension/rend
 
 | Tool(s) | Pi registration | Owning implementation / seam |
 | --- | --- | --- |
-| `bash` | `.pi/extensions/30-tools/swarm-bash.ts` | `.pi/lib/tools/swarm-bash.ts`; policy must gate execution separately. |
-| `Read`, `apply_patch`, `Undo` | `.pi/extensions/30-tools/swarm-fs-tools.ts` | `.pi/lib/tools/swarm-apply-patch.ts`, `.pi/lib/tools/swarm-read-image.ts`; filesystem boundary is an explicit decoupling seam. |
-| `Agent`, `AgentControl` | `.pi/extensions/30-tools/swarm-agent-tools.ts` | `packages/tools/agents/src/index.ts`, `packages/tools/agents/src/general-agent-adapter.ts`; child runner/session isolation lives in `packages/tools/agents`. |
-| `task_create`, `task_update`, `task_get`, `task_list`, `task_delete`, `task_claim`, `task_note`, `task_plan`, `task_complete`, `task_reopen`, `task_block`, `task_unblock`, `task_focus`, `task_unfocus`, `task_status`, `run_status` | `.pi/extensions/30-tools/taskmanage.ts`, `.pi/extensions/30-tools/control-task-tools.ts` | `packages/tools/taskmanage/src/task-manage.ts`, `packages/tools/taskmanage/src/workflow.ts`, `packages/tools/taskmanage/src/persistence.ts`, `packages/runtime/runtime-contracts/src/control-task.ts`; do not duplicate task state in extensions. |
-| `HistorySearch`, `HistoryGet` | `.pi/extensions/30-tools/swarm-history-vault-tools.ts` and `.pi/extensions/30-tools/history-search.ts` | `.pi/lib/tools/swarm-history-tools.ts` with shared `history-reader.ts`, `history-matching.ts`, and `history-admission.ts`; streaming history is read-only, resource-budgeted, redacted, and reports incomplete scans. See `docs/reference/history-search.md`. |
-| `memory_history` | `.pi/extensions/40-state/memory-history.ts` | `.pi/lib/state/shared-memory.ts`: repository-default immutable records under `~/.swarm/memory` (override `PI_SWARM_MEMORY_DIR`), Git-common-dir repository identity, worktree overlay and explicit global scope. Legacy session scope remains readable. Redact before writes. |
-| `memory_history recall` | `.pi/extensions/40-state/memory-history.ts` | `.pi/lib/context/knowledge-pageindex.ts` projects scoped records into read-only PageIndex sections; `.pi/lib/context/memory-agent.ts` calls an isolated Pi model whose only tools are `memory_browse`, `memory_read`, and `memory_select` from `.pi/lib/state/memory-retrieval-worker.ts`. The parent validates selected IDs against its snapshot. Candidate results are leads, never verified recall; writes still use explicit store operations. |
-| `memory_history offer` | `.pi/extensions/40-state/memory-history.ts` | `.pi/lib/context/memory-handoff.ts` accepts bounded explicit text, source and evidence; tool-less Pi consultation judges durable project knowledge, then the parent writes only a candidate through `KnowledgeStore`. A content/source-derived ID deduplicates retries. A read-only PageIndex projection acknowledges the exact saved revision as `stored-indexed`, otherwise `stored-index-pending` with a retry hint. No global or verified write. |
-| `project_init`, `/init` | `.pi/extensions/20-policy/project-init.ts` | `.pi/lib/policy/project-scaffold.ts`, `.pi/lib/policy/project-structure.ts`. `/init` injects an interview brief via `sendUserMessage`; the agent interviews with `ask_user_question` and calls `project_init` (`inspect`/`plan`/`apply`). There is no modal wizard. `apply` never clobbers existing files. Like `memory_history`, this is an intentional model-facing extension tool, so `swarmSurfaceFor` must keep `project_init` on the surface — otherwise it registers but is gated out and the agent reports it as missing. |
-| `bootstrap` tool, `/bootstrap`, native `/settings` → Bootstrap model | `.pi/extensions/00-runtime/bootstrap.ts` | `packages/runtime/bootstrap/src/`; parallel/combined/off strategies, read-only model consultations, streaming tool renderer and startup guidance. Model inherits the current session unless overridden. Settings use Git common dir with non-Git `.swarm` fallback. Handoff invokes active Skill/TaskManage definitions through the registered policy hooks; both modes propose task reconciliation and load selected skills through the registered handoff; task changes require `commitTasks=true`, with `pi-swarm-bootstrap-task` recording retry dedup. Returned `loadedSkills` contains the instructions; `next.loadedSkillNames` identifies already-loaded skills, not work to invoke again. Plans remain proposals requiring repository verification. `.pi/lib/ui/bootstrap-settings.ts` augments the native SettingsList through an isolated, shape-checked compatibility adapter; no replacement `/settings` command or host-file edits. Recheck this adapter against Pi UI upgrades. |
-| `skills_list`, `skill_view` | `.pi/extensions/10-context/swarm-skills.ts` | `packages/context/skills/src/index.ts` and `.pi/lib/context/swarm-skill-registry.ts`; skill bodies/support files stay on disk. |
-| Final Mermaid response repair and follow-up | `.pi/extensions/10-context/mermaid-response.ts` | `.pi/lib/context/mermaid-response.ts` and `mermaid-followup.ts`; `message_end` replaces only successful finalized assistant text before persistence/final redraw. The streaming preview may already have shown the original. Mermaid fences are processed independently (up to 16); only one narrowly recognized flowchart arrow or sequence-message colon per diagram is changed after successful revalidation. Other syntax and validator failures preserve the original. For conceptual/explicit-diagram user requests, `turn_end` queues one model-visible `followUp` if a substantial final explanation lacks a Mermaid fence; it does not replace the previous response, and a second omission does not loop. Pi's terminal Markdown renderer displays Mermaid as code, not SVG connectors; connector color belongs in the actual diagram-rendering client. |
-| `Skill`, `SkillManage` | skill/autogen integration via `.pi/extensions/10-context/swarm-skills.ts`, `.pi/extensions/10-context/autogenskills.ts` | `packages/context/autogenskills/src/index.ts`; mutate skills only through the vault/revision API. |
-| `web_fetch`, `deepwiki`, `browser_get_page` | `.pi/extensions/30-tools/research-tools.ts` | Extension-local bounded evidence fetcher; provenance and network policy are coupled requirements. |
-| `enter_plan_mode`, `exit_plan_mode` | `.pi/extensions/10-context/swarm-plan-mode.ts` | `.pi/lib/context/swarm-plan-mode.ts`; plan approval is separate from implementation. |
-| `/auto on|off|status` | `.pi/extensions/10-context/swarm-auto.ts` | Opt-in session-local autonomous continuation. Contributes `auto:on/off` through the existing `pi-swarm-footer-segments` registry; it never replaces the footer slot. `.pi/lib/context/auto-mode-state.ts` exposes session-ID-scoped state to ask-user: active auto mode uses a bounded tool-less consultation before any dialog, validates the answer, and labels it autonomous (never user consent). Failure returns an error without opening UI. `before_agent_start` supplies bounded branch and tracked-worktree context; settled `agent_end` follows an explicit progress marker only while idle. No global provider limits or policy gates are changed. |
-| `ask_user_question` | `.pi/extensions/30-tools/ask-user/index.ts` | Fork of `edlsh/pi-ask-user` v0.15.0 (MIT, `LICENSE` beside it); local edits are marked `pi-swarm:`. Upstream `bun:test` suite not carried; `.pi/test/tools/ask-user-layout.test.ts` covers the layout helper. |
-| `control_plane_status` | `.pi/extensions/50-ui/control-panel.ts` | `packages/runtime/runtime-contracts/src/control-plane.ts`, `control-plane-store.ts`; dashboard is read-only. |
-| `daemon_status`, task/run tools | `.pi/extensions/00-runtime/swarm-runtime.ts`, `.pi/extensions/30-tools/control-task-tools.ts` | `packages/runtime/runtime-contracts/src/daemon-rpc.ts`, `control-task.ts`; unavailable daemon must fail closed. Daemon goal/loop APIs remain available to non-TUI consumers, but are not registered in the TUI. |
-| `scheduler`, `/goal`, `/loop` | `.pi/extensions/30-tools/swarm-goal.ts` | `.pi/lib/tools/swarm-goal.ts`; session-local scheduling and evidence-based goal continuation without a turn cap. Replaces the separate CronCreate/List/Delete and ScheduleWakeup TUI tools. |
+| `bash` | `extensions/swarm-bash/extension.ts` | `.pi/lib/tools/swarm-bash.ts`; policy must gate execution separately. |
+| `Read`, `apply_patch`, `Undo` | `extensions/swarm-fs-tools/extension.ts` | `.pi/lib/tools/swarm-apply-patch.ts`, `.pi/lib/tools/swarm-read-image.ts`; filesystem boundary is an explicit decoupling seam. |
+| `Agent`, `AgentControl` | `extensions/swarm-agent-tools/extension.ts` | `packages/tools/agents/src/index.ts`, `packages/tools/agents/src/general-agent-adapter.ts`; child runner/session isolation lives in `packages/tools/agents`. |
+| `task_create`, `task_update`, `task_get`, `task_list`, `task_delete`, `task_claim`, `task_note`, `task_plan`, `task_complete`, `task_reopen`, `task_block`, `task_unblock`, `task_focus`, `task_unfocus`, `task_status`, `run_status` | `extensions/taskmanage/extension.ts`, `extensions/control-task-tools/extension.ts` | `packages/tools/taskmanage/src/task-manage.ts`, `packages/tools/taskmanage/src/workflow.ts`, `packages/tools/taskmanage/src/persistence.ts`, `packages/runtime/runtime-contracts/src/control-task.ts`; do not duplicate task state in extensions. |
+| `HistorySearch`, `HistoryGet` | `extensions/swarm-history-vault-tools/extension.ts` and `extensions/history-search/extension.ts` | `.pi/lib/tools/swarm-history-tools.ts` with shared `history-reader.ts`, `history-matching.ts`, and `history-admission.ts`; streaming history is read-only, resource-budgeted, redacted, and reports incomplete scans. See `docs/reference/history-search.md`. |
+| `memory_history` | `extensions/memory-history/extension.ts` | `.pi/lib/state/shared-memory.ts`: repository-default immutable records under `~/.swarm/memory` (override `PI_SWARM_MEMORY_DIR`), Git-common-dir repository identity, worktree overlay and explicit global scope. Legacy session scope remains readable. Redact before writes. |
+| `memory_history recall` | `extensions/memory-history/extension.ts` | `.pi/lib/context/knowledge-pageindex.ts` projects scoped records into read-only PageIndex sections; `.pi/lib/context/memory-agent.ts` calls an isolated Pi model whose only tools are `memory_browse`, `memory_read`, and `memory_select` from `.pi/lib/state/memory-retrieval-worker.ts`. The parent validates selected IDs against its snapshot. Candidate results are leads, never verified recall; writes still use explicit store operations. |
+| `memory_history offer` | `extensions/memory-history/extension.ts` | `.pi/lib/context/memory-handoff.ts` accepts bounded explicit text, source and evidence; tool-less Pi consultation judges durable project knowledge, then the parent writes only a candidate through `KnowledgeStore`. A content/source-derived ID deduplicates retries. A read-only PageIndex projection acknowledges the exact saved revision as `stored-indexed`, otherwise `stored-index-pending` with a retry hint. No global or verified write. |
+| `project_init`, `/init` | `extensions/project-init/extension.ts` | `.pi/lib/policy/project-scaffold.ts`, `.pi/lib/policy/project-structure.ts`. `/init` injects an interview brief via `sendUserMessage`; the agent interviews with `ask_user_question` and calls `project_init` (`inspect`/`plan`/`apply`). There is no modal wizard. `apply` never clobbers existing files. Like `memory_history`, this is an intentional model-facing extension tool, so `swarmSurfaceFor` must keep `project_init` on the surface — otherwise it registers but is gated out and the agent reports it as missing. |
+| `bootstrap` tool, `/bootstrap`, native `/settings` → Bootstrap model | `extensions/bootstrap/extension.ts` | `packages/runtime/bootstrap/src/`; parallel/combined/off strategies, read-only model consultations, streaming tool renderer and startup guidance. Model inherits the current session unless overridden. Settings use Git common dir with non-Git `.swarm` fallback. Handoff invokes active Skill/TaskManage definitions through the registered policy hooks; both modes propose task reconciliation and load selected skills through the registered handoff; task changes require `commitTasks=true`, with `pi-swarm-bootstrap-task` recording retry dedup. Returned `loadedSkills` contains the instructions; `next.loadedSkillNames` identifies already-loaded skills, not work to invoke again. Plans remain proposals requiring repository verification. `.pi/lib/ui/bootstrap-settings.ts` augments the native SettingsList through an isolated, shape-checked compatibility adapter; no replacement `/settings` command or host-file edits. Recheck this adapter against Pi UI upgrades. |
+| `skills_list`, `skill_view` | `extensions/swarm-skills/extension.ts` | `packages/context/skills/src/index.ts` and `.pi/lib/context/swarm-skill-registry.ts`; skill bodies/support files stay on disk. |
+| Final Mermaid response repair and follow-up | `extensions/mermaid-response/extension.ts` | `.pi/lib/context/mermaid-response.ts` and `mermaid-followup.ts`; `message_end` replaces only successful finalized assistant text before persistence/final redraw. The streaming preview may already have shown the original. Mermaid fences are processed independently (up to 16); only one narrowly recognized flowchart arrow or sequence-message colon per diagram is changed after successful revalidation. Other syntax and validator failures preserve the original. For conceptual/explicit-diagram user requests, `turn_end` queues one model-visible `followUp` if a substantial final explanation lacks a Mermaid fence; it does not replace the previous response, and a second omission does not loop. Pi's terminal Markdown renderer displays Mermaid as code, not SVG connectors; connector color belongs in the actual diagram-rendering client. |
+| `Skill`, `SkillManage` | skill/autogen integration via `extensions/swarm-skills/extension.ts`, `extensions/autogenskills/extension.ts` | `packages/context/autogenskills/src/index.ts`; mutate skills only through the vault/revision API. |
+| `web_fetch`, `deepwiki`, `browser_get_page` | `extensions/research-tools/extension.ts` | Extension-local bounded evidence fetcher; provenance and network policy are coupled requirements. |
+| `enter_plan_mode`, `exit_plan_mode` | `extensions/swarm-plan-mode/extension.ts` | `.pi/lib/context/swarm-plan-mode.ts`; plan approval is separate from implementation. |
+| `/auto on|off|status` | `extensions/swarm-auto/extension.ts` | Opt-in session-local autonomous continuation. Contributes `auto:on/off` through the existing `pi-swarm-footer-segments` registry; it never replaces the footer slot. `.pi/lib/context/auto-mode-state.ts` exposes session-ID-scoped state to ask-user: active auto mode uses a bounded tool-less consultation before any dialog, validates the answer, and labels it autonomous (never user consent). Failure returns an error without opening UI. `before_agent_start` supplies bounded branch and tracked-worktree context; settled `agent_end` follows an explicit progress marker only while idle. No global provider limits or policy gates are changed. |
+| `ask_user_question` | `extensions/ask-user/extension.ts` | Fork of `edlsh/pi-ask-user` v0.15.0 (MIT, `LICENSE` beside it); local edits are marked `pi-swarm:`. Upstream `bun:test` suite not carried; `.pi/test/tools/ask-user-layout.test.ts` covers the layout helper. |
+| `control_plane_status` | `extensions/control-panel/extension.ts` | `packages/runtime/runtime-contracts/src/control-plane.ts`, `control-plane-store.ts`; dashboard is read-only. |
+| `daemon_status`, task/run tools | `extensions/control-task-tools/extension.ts` | `packages/runtime/runtime-contracts/src/daemon-rpc.ts`, `control-task.ts`; unavailable daemon must fail closed. Daemon goal/loop APIs remain available to non-TUI consumers, but are not registered in the TUI. |
+| `scheduler`, `/goal`, `/loop` | `extensions/swarm-goal/extension.ts` | `.pi/lib/tools/swarm-goal.ts`; session-local scheduling and evidence-based goal continuation without a turn cap. Replaces the separate CronCreate/List/Delete and ScheduleWakeup TUI tools. |
 | Session wake-up delivery | `.pi/lib/runtime/session-wakeup.ts` | Background-agent completion and swarm-goal share custom-message delivery with triggerTurn, generation guards, and shutdown invalidation. No runtime imports from vendor. |
-| `vault_add`, `vault_approve`, `vault_exec`, `vault_list`, `vault_two_person_status` | `.pi/extensions/30-tools/swarm-history-vault-tools.ts` | `.pi/lib/tools/swarm-vault-tools.ts`; never expose secret values. |
-| `vault` | `.pi/extensions/30-tools/vault.ts` | `.pi/lib/tools/swarm-vault-tools.ts`; transparent global credential storage, with explicit user-risk warning. |
-| `mcp__<server>__<tool>` | `.pi/extensions/00-runtime/swarm-runtime.ts`, `.pi/extensions/30-tools/swarm-websearch.ts` / `packages/tools/mcp/src/index.ts` | Provider-neutral declared MCP bridge; manifests, allowlists, transport, and auth are the seam. |
-| `annoyed` | `.pi/extensions/30-tools/annoyed/index.ts` | `.pi/extensions/30-tools/annoyed/store.ts`, `.pi/lib/tools/swarm-annoyed-routing.ts`, and `swarm-annoyed-publish.ts`; a tool-less ownership judge routes project reports only to a verified active-workspace GitHub remote and Trebol triages upstream/non-actionable/uncertain/judge-failure/missing-remote cases. Publication receipts are SQLite metadata with a stable remote marker; ambiguous results are never blindly retried and SQLite/GitHub is not exactly-once. Transcript stays local; nudge behavior remains separate. |
+| `vault_add`, `vault_approve`, `vault_exec`, `vault_list`, `vault_two_person_status` | `extensions/swarm-history-vault-tools/extension.ts` | `.pi/lib/tools/swarm-vault-tools.ts`; never expose secret values. |
+| `vault` | `extensions/vault/extension.ts` | `.pi/lib/tools/swarm-vault-tools.ts`; transparent global credential storage, with explicit user-risk warning. |
+| `mcp__<server>__<tool>` | `extensions/mcp-fallback/extension.ts`, `extensions/swarm-websearch/extension.ts` / `packages/tools/mcp/src/index.ts` | Provider-neutral declared MCP bridge; manifests, allowlists, transport, and auth are the seam. |
+| `annoyed` | `extensions/annoyed/extension.ts` | `extensions/annoyed/store.ts`, `.pi/lib/tools/swarm-annoyed-routing.ts`, and `swarm-annoyed-publish.ts`; a tool-less ownership judge routes project reports only to a verified active-workspace GitHub remote and Trebol triages upstream/non-actionable/uncertain/judge-failure/missing-remote cases. Publication receipts are SQLite metadata with a stable remote marker; ambiguous results are never blindly retried and SQLite/GitHub is not exactly-once. Transcript stays local; nudge behavior remains separate. |
 
 Model-facing workflow wording is adapted by
 `packages/context/prompt/src/workflow-guidance.ts` in prompt presets, Forge
@@ -261,7 +259,7 @@ Names may be filtered by active-tool policy. `swarm-tools-status` and
 those instead of assuming every row above is enabled.
 
 Paseo integration is currently Linux-only for managed process ownership checks
-(`.pi/lib/tools/paseo-setup.ts`, adapted by `.pi/extensions/30-tools/paseo.ts`). New launches default to loopback and use
+(`.pi/lib/tools/paseo-setup.ts`, adapted by `extensions/paseo/extension.ts`). New launches default to loopback and use
 per-user state under `$XDG_STATE_HOME/pi-swarm/paseo` (default
 `~/.local/state/pi-swarm/paseo`). Existing owned PID records are checked before
 launch, subprocesses are bounded, and daemon health includes HTTP validation.
@@ -393,9 +391,9 @@ to activate the working budget. Reload resets readiness, not the persisted mode.
 | Builtin `loop` | `packages/context/skills/builtins/loop/SKILL.md` | `packages/context/skills/src/index.ts` loader; progressive disclosure. |
 | Builtin `swarm-skill` | `packages/context/skills/builtins/swarm-skill/SKILL.md` and `references/SKILL-AUTHORING.md` | Skill authoring contract. |
 | Builtin `swarm-workflow` | `packages/context/skills/builtins/swarm-workflow/SKILL.md` and `references/` | Workflow schema, profiles, examples, strategies, troubleshooting. |
-| `ask-user` | `.pi/extensions/30-tools/ask-user/skills/ask-user/SKILL.md` and `references/` | Carried with the forked `ask_user_question` extension; deliberately not registered as a builtin so the parity-compared `<available_skills>` block is unchanged. |
+| `ask-user` | `extensions/ask-user/skills/ask-user/SKILL.md` and `references/` | Carried with the forked `ask_user_question` extension; deliberately not registered as a builtin so the parity-compared `<available_skills>` block is unchanged. |
 | Autogenerated/project/user/managed/install skills | Runtime search paths resolved by `packages/context/skills/src/index.ts` | Do not hard-code paths; `swarm-skills.ts` exposes source and support files. |
-| Autogenerated skill lifecycle/revisions | `.pi/extensions/10-context/autogenskills.ts` + `packages/context/autogenskills/src/index.ts` | Curator, locks, budgets, review/absorb/archive/pin. |
+| Autogenerated skill lifecycle/revisions | `extensions/autogenskills/extension.ts` + `packages/context/autogenskills/src/index.ts` | Curator, locks, budgets, review/absorb/archive/pin. |
 | Local harness skill | `.swarm/skills/pi-harness-engineering/SKILL.md` | Runtime state/configuration; do not mistake it for a builtin package skill. |
 
 If changing skill discovery, loading, precedence, progressive disclosure, or
@@ -408,14 +406,14 @@ the Pi adapter only for registration/presentation concerns.
 | --- | --- | --- |
 | Central hook state and ordering | `.pi/lib/runtime/hook-state.ts` | Registration, enablement, persistence, and visibility. |
 | Same-session hook correction | `.pi/lib/runtime/hook-correction.ts` | Shared session-keyed coordinator installed by `registerHook`. `tool_call` blocks gain same-step correction guidance and escalate to `terminate` after 3 attempts; pure tool-identity previews (autogen skill budget, task enforcement, bootstrap memory gate) may abort streaming early and dispatch one bounded correction via native `agent_settled` + `sendMessage(triggerTurn:true)`. User input, Escape/Ctrl+C, reload, and compaction invalidate pending corrections. Argument-dependent gates (disk hooks, structure guard, Bash classification) never preview early. |
-| Prompt hook `packages/context/prompt` | `.pi/extensions/10-context/swarm-prompt.ts` | `before_agent_start`; prompt/context assembly in `packages/context/prompt/src/index.ts` and `.pi/lib/context/swarm-context.ts`. |
-| Disk hooks `disk-hooks` | `.pi/extensions/20-policy/swarm-disk-hooks.ts` | Loads project/user hook config, executes bounded commands; maps tool/session/prompt/compact events. |
-| Structure guard `structure-guard` | `.pi/extensions/20-policy/project-init.ts` | `tool_call`; denies `write`/`edit`/`apply_patch` *creations* that violate `.project/structure.json` before the tool runs. Policy and classification in `.pi/lib/policy/project-structure.ts`, tool-argument extraction in `structure-guard.ts`. Existing paths are never blocked; `PI_SWARM_NO_STRUCTURE_GUARD=1` disables it like `PI_SWARM_NO_HOOKS`. |
-| Inline hook presentation | `.pi/extensions/00-runtime/hooks.ts`, `.pi/lib/runtime/hook-render-bridge.ts`, `.pi/lib/runtime/hook-presenter.ts` | UI only; never make governance depend on rendering. |
-| Annoyance/nudge | `.pi/extensions/30-tools/annoyed/nudge.ts` | `tool_result`, `turn_end`; persistence in `annoyed/store.ts`. |
-| Task enforcement | `.pi/extensions/30-tools/taskmanage.ts` | `packages/tools/taskmanage/src/task-hooks.ts`, `swarm-hook-runtime.ts`; task state is authoritative in taskmanage. |
-| Metrics/cache telemetry | `.pi/extensions/50-ui/conversation-metrics.ts`, `cache-telemetry.ts` | Agent/message/provider lifecycle; persisted telemetry is non-secret. |
-| Theme/thinking/UI lifecycle | `.pi/extensions/50-ui/swarm-themes.ts`, `swarm-thinking.ts` | Presentation/config only. |
+| Prompt hook `packages/context/prompt` | `extensions/swarm-prompt/extension.ts` | `before_agent_start`; prompt/context assembly in `packages/context/prompt/src/index.ts` and `.pi/lib/context/swarm-context.ts`. |
+| Disk hooks `disk-hooks` | `extensions/swarm-disk-hooks/extension.ts` | Loads project/user hook config, executes bounded commands; maps tool/session/prompt/compact events. |
+| Structure guard `structure-guard` | `extensions/project-init/extension.ts` | `tool_call`; denies `write`/`edit`/`apply_patch` *creations* that violate `.project/structure.json` before the tool runs. Policy and classification in `.pi/lib/policy/project-structure.ts`, tool-argument extraction in `structure-guard.ts`. Existing paths are never blocked; `PI_SWARM_NO_STRUCTURE_GUARD=1` disables it like `PI_SWARM_NO_HOOKS`. |
+| Inline hook presentation | `extensions/hooks/extension.ts`, `.pi/lib/runtime/hook-render-bridge.ts`, `.pi/lib/runtime/hook-presenter.ts` | UI only; never make governance depend on rendering. |
+| Annoyance/nudge | `extensions/annoyed/nudge.ts` | `tool_result`, `turn_end`; persistence in `annoyed/store.ts`. |
+| Task enforcement | `extensions/taskmanage/extension.ts` | `packages/tools/taskmanage/src/task-hooks.ts`, `swarm-hook-runtime.ts`; task state is authoritative in taskmanage. |
+| Metrics/cache telemetry | `extensions/conversation-metrics/extension.ts`, `cache-telemetry.ts` | Agent/message/provider lifecycle; persisted telemetry is non-secret. |
+| Theme/thinking/UI lifecycle | `extensions/swarm-themes/extension.ts`, `swarm-thinking.ts` | Presentation/config only. |
 
 Task stop-time reconciliation lives in `.pi/lib/runtime/swarm-builtin-hooks-runtime.ts`.
 After observed work and a normal stop, it may request one follow-up per external
@@ -509,7 +507,7 @@ npm run dogfood                   # build + test
 ### Installing globally
 
 The repository is itself a Pi package (root `package.json` `pi` manifest:
-the six extension layers and `.pi/themes`). Never copy `.pi/extensions/`
+individual extension entrypoints and `.pi/themes`). Never copy `extensions/`
 anywhere — the extensions import `.pi/lib` and `packages/*/src` by relative
 path (tests import `tests/fixtures`) and need the hoisted `node_modules`.
 
@@ -579,7 +577,7 @@ separate question lifecycle or follow-up tool-call limit is introduced.
 credential `typesafe-api-key` through the existing internal resolver (never tool
 parameters). `PI_SWARM_JEV_CREDENTIAL_ID` overrides the ID;
 `PI_SWARM_JEV_VAULT=off` disables fallback. Values are never put in audit evidence. The state-layer adapter
-`.pi/extensions/40-state/jev-knowledge-audit.ts` counts completed Pi turns and
+`extensions/jev-knowledge-audit/extension.ts` counts completed Pi turns and
 audits at the next turn start after five new turns, and on agent_end for final evidence. Stop audits process one bounded batch and never wake the agent; remaining backlog is retained. Domain collection/API/review
 logic is in `.pi/lib/context/jev-knowledge-audit.ts`; mode coordination lives in
 `jev-audit-mode.ts`. Persisted `pi-swarm-jev-audit` entries hold cursor/count and
@@ -613,7 +611,7 @@ controls the parent-session queue. Defaults: one worker at a time, up to four
 queued Jev packets, six new child model turns, 90-second wall deadline. The main
 agent remains free to work. No Harbor or global memory/skill edits are involved.
 
-`.pi/extensions/40-state/memory-maintenance.ts` owns queue/cancellation/receipts;
+`extensions/memory-maintenance/extension.ts` owns queue/cancellation/receipts;
 `.pi/lib/context/memory-maintenance-runner.ts` snapshots the active visible branch
 and invokes actual Pi `--fork` into a separate child session. Snapshots are
 redacted, omit reasoning, preserve source IDs, are capped at 2MB, and remain under
@@ -696,7 +694,7 @@ Use only `/supervisor` for Jev audit, operational review and memory-worker contr
 `/supervisor status` reports sanitized settings and adapter status. The compact
 setWidget projection does not replace the single metrics-owned footer.
 
-UI adapter: `.pi/extensions/50-ui/supervisor.ts`; shared session control:
+UI adapter: `extensions/supervisor/extension.ts`; shared session control:
 `.pi/lib/context/supervisor-control.ts`; validated settings: `supervisor-settings.ts`.
 Global defaults: `~/.swarm/config/supervisor.json`. Per-project overrides:
 Git-common-dir `pi-swarm/supervisor.json`, or non-Git `.swarm/supervisor.json`.
@@ -807,3 +805,77 @@ excluded by the user's selection. Adapter configs use literal `headers` (or
 its explicit credential-reference syntax), not Pi-Swarm's custom `apiKey` fields.
 Never print header values during diagnostics. Vendor example configs are not
 runtime configuration sources.
+
+### Install recovery diagnostics
+
+`tools/install/doctor.mjs` checks runtime dependencies including `re2-wasm`
+and all three prepare-built runtime packages. Its package-source helper
+(`tools/install/package-sources.mjs`) resolves local settings paths and flags
+historical Trebol/Swarm Git installs alongside a development checkout. A Git
+clone is not the same resource identity as the local checkout: keep only one
+registration to avoid duplicate tools. Run `npm install` in a fresh checkout
+before opening Pi; local package registration alone does not prove dependencies
+or dist outputs exist. Regression tests: `tests/install-package-sources.test.ts`.
+
+Installation layout is documented in `docs/reference/install-layout.md`.
+`npm run check:install` uses `tools/install/check-load.mjs` to load the package
+with isolated temporary settings, without starting a session or invoking a model.
+`tools/install/pi-host.mjs` resolves the SDK belonging to the PATH executable
+(or `PI_EXECUTABLE`); the toggle session probe shares this resolver. No hardcoded
+global npm prefix. This executes extension factories, not a security sandbox;
+it does not certify individual tools or real-user resource filters.
+
+### Flat extension migration (worktree)
+
+Public entrypoints are `extensions/<name>/index.ts`; implementations and private
+assets live beside them. Root manifest ordering is explicit for compatibility,
+not a dependency injection mechanism. `control-task-tools` owns its daemon
+client and registrations; `mcp-fallback` owns fallback MCP and the legacy
+`/swarm-runtime` diagnostic; `swarm-agent-tools` owns both Agent/AgentControl and
+legacy agent tools with one manager. Only `swarm-prompt` registers prompt hooks.
+Only `vault` registers the vault tool; history does not silently enable it.
+No legacy layer manifests remain. Existing user resource filters require the
+path migration in `tools/repo/extension-moves.json`; personal settings are not
+automatically rewritten. Shared `.pi/lib/runtime` helpers remain and are not
+claimed to be eliminated by this migration.
+
+Installation verification supports `npm run check:install -- --extension
+extensions/<name>/index.ts` for isolated entry loading. The preview-only settings
+migration command is `node tools/install/migrate-extension-paths.mjs
+<settings.json>`; it never writes configuration and flags legacy glob filters for
+manual review. See the independent-extensions architecture record for latest
+verification and unresolved macOS shell / task-correction smoke failures.
+
+Headless task correction uses the normal Pi tool_call rejection/result path;
+stream-time speculative abort is TUI-only. Validation:
+`.pi/test/runtime/hook-correction-headless.test.ts` and
+`node tools/experiments/jev-audit/task-enforcement-smoke.mjs` (isolated local
+scripted provider; requires no provider credentials).
+
+Native settlement now owns final notification: `.pi/lib/runtime/agent-settled.ts`
+retains the last attempt payload but schedules no timers. Do not reintroduce a
+quiet-period completion heuristic. Bootstrap tool calls prefer ctx.executeTool;
+lifecycle supervisor dispatch retains the compatibility path explicitly.
+macOS background-shell streaming uses `.pi/lib/tools/pty-runner.py` with optional
+Python3 and a stdbuf/direct fallback; Linux uses util-linux script. Test the real
+shell suite after any runner change. Local complete-suite validation on macOS
+uses canonical TMPDIR=/private/tmp to avoid /var symlink-path fixture failures.
+
+Auto and goal continuation use `agent_before_settle` drafts + continue:true;
+final settlement is observational. Preserve existing boundary drafts and do not
+require pre-draft canContinue: adding a custom message establishes valid context.
+Real-host check: `node tools/e2e/auto-boundary.mjs` (loopback scripted provider,
+isolated settings, no paid API). Scheduler timers still use session wakeup.
+
+Correction now uses authoritative tool_call rejection in every mode; speculative
+streaming abort previews and settled wakeups are removed. Bootstrap handoff
+compatibility registrations are session-scoped and disposed on shutdown; native
+tool-context calls use Pi executeTool. Supervisor's non-tool-context fallback
+still sees only Trebol-registered hooks and remains explicit compatibility debt.
+Bootstrap settings patch disposal restores owned render methods and injected rows.
+
+Fallback hook dispatch is session-scoped, preserves multiple handlers per group,
+and removes owner registrations on shutdown. It rejects missing session identity.
+Ctrl+N adapter installation returns a release lease; last owner restores its
+patch, without clobbering later adapters. Tests: session-hook-dispatch and
+ trebol-shortcut under `.pi/test/runtime/`, plus actual-host toggle smoke.

@@ -1,5 +1,5 @@
 import {it,expect} from "vitest";
-import {registerTaskManageExtension} from "../../extensions/30-tools/taskmanage.ts";
+import {registerTaskManageExtension} from "../../../extensions/taskmanage/extension.ts";
 it("default adapter blocks mutation until an active task exists while allowing recovery and reads",async()=>{
  const handlers=new Map<string,Function[]>();const pi={on:(n:string,f:Function)=>handlers.set(n,[...(handlers.get(n)??[]),f]),appendEntry(){},registerTool(){}};
  const {manager}=registerTaskManageExtension(pi);

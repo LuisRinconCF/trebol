@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { registerDiskHooks } from "../../extensions/20-policy/swarm-disk-hooks.ts";
+import { registerDiskHooks } from "../../../extensions/swarm-disk-hooks/extension.ts";
 
 describe("disk hook Pi adapter", () => {
   it("translates a blocking hook decision into Pi's tool_call contract", async () => {

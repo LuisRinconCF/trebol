@@ -5,7 +5,6 @@ import { writeFile, readFile, unlink } from "node:fs/promises";
 import { parseDelay, nextCronTime, validateCron } from "../../../packages/tools/schedule/src/cron.ts";
 import { withDefaultToolRenderer } from "../../../packages/runtime/core/src/tool-renderer.ts";
 import { createSessionWakeup } from "../runtime/session-wakeup.ts";
-import { onAgentSettled } from "../runtime/agent-settled.ts";
 import { registerScheduleStatus, type PendingSchedule } from "../runtime/schedule-status.ts";
 
 export type GoalVerdict = "MET" | "NOT_MET" | "IMPOSSIBLE";
@@ -199,7 +198,8 @@ export function registerSwarmGoal(pi: any, options: SwarmGoalOptions = {}) {
     const last = [...entries].reverse().find((e: any) => e.customType === ENTRY);
     if (last?.data?.condition && ["active", "met", "impossible", "error"].includes(last.data.status)) goal = { ...last.data };
   });
-  onAgentSettled(pi, async (_event: any, ctx: any) => {
+  pi.on("agent_before_settle", async (_event: any, ctx: any) => {
+    if (_event.outcome !== "completed" || _event.continue || ctx.hasPendingMessages?.()) return;
     if (!live || !goal || goal.status !== "active" || evaluating) return;
     const owner = wake.capture(); const version = revision; const current = goal;
     evaluating = true;
@@ -208,7 +208,7 @@ export function registerSwarmGoal(pi: any, options: SwarmGoalOptions = {}) {
       // Full transcript on disk, one JSON message per line; the judge greps/reads it.
       // Include structured tool-call arguments/results; don't serialize hidden thinking.
       const branch = ctx?.sessionManager?.getBranch?.() ?? ctx?.sessionManager?.getEntries?.() ?? [];
-      const source = branch.length ? branch.filter((entry: any) => entry?.type === "message").map((entry: any) => entry.message ?? entry) : (_event?.messages ?? []);
+      const source = branch.length ? branch.filter((entry: any) => entry?.type === "message").map((entry: any) => entry.message ?? entry) : (_event.context?.contextMessages ?? []);
       const rows = source.map((m: any) => {
         const content = Array.isArray(m.content) ? m.content.filter((p: any) => p.type !== "thinking") : m.content;
         return JSON.stringify({ role: m.role, toolName: m.toolName, content }) + "\n";
@@ -223,7 +223,7 @@ export function registerSwarmGoal(pi: any, options: SwarmGoalOptions = {}) {
       if (verdict !== "NOT_MET") { current.status = verdict === "MET" ? "met" : "impossible"; persist(); notify(`Goal ${current.status}: ${current.condition}`); return; }
       // Release the evaluation guard before scheduling the next turn.
       evaluating = false;
-      await wake.send({ customType: "swarm-goal", content: `Goal check: NOT_MET. Continue working toward: ${current.condition}\nOther schedules: ${JSON.stringify([...schedules.values()].map(describe))}`, display: true }, () => owner() && version === revision && goal === current);
+      return { continue: true, entries: [..._event.entries, { type: "custom_message", customType: "swarm-goal", content: `Goal check: NOT_MET. Continue working toward: ${current.condition}\nOther schedules: ${JSON.stringify([...schedules.values()].map(describe))}`, display: true }] };
     } catch (error) {
       if (owner() && version === revision && goal === current) { current.status = "error"; persist(); notify(`Goal evaluation stopped: ${error instanceof Error ? error.message : error}`, "error"); }
     } finally { evaluating = false; await unlink(transcriptPath).catch(() => {}); }

@@ -7,7 +7,7 @@ vi.mock("@earendil-works/pi-tui",()=>({
  isKeyRelease:(data:string)=>data==="ctrl+d:release",
 }));
 vi.mock("../../lib/runtime/bootstrap-dispatch.ts",()=>({dispatchBootstrapHandoff:vi.fn(async()=>({content:[{type:"text",text:'{"status":"succeeded","results":[{"status":"succeeded"}]}'}]}))}));
-import bootstrap from "../../extensions/00-runtime/bootstrap.ts";
+import bootstrap from "../../../extensions/bootstrap/extension.ts";
 import {dispatchBootstrapHandoff} from "../../lib/runtime/bootstrap-dispatch.ts";
 import {writeBootstrapSettings} from "../../../packages/runtime/bootstrap/src/store.ts";
 it("establishes a task even with omitted commitTasks and missing model",async()=>{

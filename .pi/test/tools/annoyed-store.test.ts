@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { AnnoyedStore, boundTranscript, TRANSCRIPT_BUDGET_BYTES } from "../../extensions/30-tools/annoyed/store.ts";
+import { AnnoyedStore, boundTranscript, TRANSCRIPT_BUDGET_BYTES } from "../../../extensions/annoyed/store.ts";
 
 const home = () => mkdtempSync(join(tmpdir(), "annoyed-store-"));
 const entries = (count: number, bytes: number) =>

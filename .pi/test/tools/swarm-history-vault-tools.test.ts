@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { registerSwarmHistoryVaultTools } from "../../extensions/30-tools/swarm-history-vault-tools.ts";
+import { registerSwarmHistoryVaultTools } from "../../../extensions/swarm-history-vault-tools/extension.ts";
 import { historyGet, historySearch, normalizeHistoryGetParams } from "../../lib/tools/swarm-history-tools.ts";
 import { parseVaultDuration, vaultAdd, vaultGet, vaultList } from "../../lib/tools/swarm-vault-tools.ts";
 

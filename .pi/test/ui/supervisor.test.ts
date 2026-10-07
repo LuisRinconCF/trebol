@@ -1,6 +1,6 @@
 import {it,expect,vi,afterEach} from "vitest";
 import {mkdtempSync,rmSync} from "node:fs";import {tmpdir} from "node:os";import {join} from "node:path";
-import panel from "../../extensions/50-ui/supervisor.ts";
+import panel from "../../../extensions/supervisor/extension.ts";
 import {registerSupervisorAdapter} from "../../lib/context/supervisor-control.ts";
 const old=process.env.HOME;const roots:string[]=[];afterEach(()=>{process.env.HOME=old;for(const r of roots.splice(0))rmSync(r,{recursive:true,force:true});});
 it("registers one command and applies panel toggle to actual adapter",async()=>{

@@ -2,7 +2,7 @@ import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { describe, expect, it } from "vitest";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
-import { registerSwarmBackgroundBash } from "../../extensions/30-tools/swarm-background-bash.ts";
+import { registerSwarmBackgroundBash } from "../../../extensions/swarm-background-bash/extension.ts";
 import { PERMISSIVE_PARAMETERS, overlaySwarmToolSchemas } from "../../lib/runtime/swarm-tool-surface.ts";
 import { TOOL_CONTRACTS } from "../../lib/runtime/tool-contracts.ts";
 import { bgOutputPreview, formatBackgroundDone, SwarmBackgroundProcessManager } from "../../lib/tools/swarm-bgprocess.ts";

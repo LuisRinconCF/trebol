@@ -7,6 +7,7 @@ it("adds one native settings row, saves submenu selection, and preserves origina
     constructor(public items: any[], _max?: any, _theme?: any, public change?: any, public cancel?: any) { this.filteredItems = items; }
     render(_width: number) { return this.items.map(x => x.label); }
   }
+  const original = List.prototype.render;
   const save = vi.fn();
   const access = { current: () => "Use session model", models: () => ["provider/model"], save, error: vi.fn() };
   const dispose = installBootstrapSettings(List, access);
@@ -19,5 +20,7 @@ it("adds one native settings row, saves submenu selection, and preserves origina
   submenu.change("0"); expect(save).toHaveBeenLastCalledWith("Use session model");
   expect(new List([{ id: "other", label: "Other" }]).render(80)).toEqual(["Other"]);
   dispose();
+  expect(List.prototype.render).toBe(original);
+  expect(list.items.map(x => x.id)).toEqual(["autocompact", "steering-mode"]);
   expect(new List([{ id: "autocompact" }, { id: "steering-mode" }]).items).toHaveLength(2);
 });

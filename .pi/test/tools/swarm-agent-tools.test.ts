@@ -5,7 +5,7 @@ import { basename, join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { AgentManager, type Runner } from "../../../packages/tools/agents/src/index.ts";
 import { SwarmAgentTools } from "../../lib/tools/swarm-agent-tools.ts";
-import { registerSwarmAgentTools } from "../../extensions/30-tools/swarm-agent-tools.ts";
+import { registerSwarmAgentTools } from "../../../extensions/swarm-agent-tools/extension.ts";
 import { TOOL_CONTRACTS } from "../../lib/runtime/tool-contracts.ts";
 
 const root = resolve(import.meta.dirname, "../../..");

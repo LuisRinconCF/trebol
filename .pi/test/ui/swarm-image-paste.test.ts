@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import swarmImagePaste, { captureClipboardImage, handleImagePaste } from "../../extensions/50-ui/swarm-image-paste.ts";
+import swarmImagePaste, { captureClipboardImage, handleImagePaste } from "../../../extensions/swarm-image-paste/extension.ts";
 import { buildProbeScript, readClipboardImageViaPowerShell, type WindowsClipboardDeps } from "../../lib/ui/windows-clipboard.ts";
 
 function deps(overrides: Partial<WindowsClipboardDeps> = {}): WindowsClipboardDeps {

@@ -1,5 +1,5 @@
 import {it,expect} from "vitest";
-import extension from "../../extensions/40-state/memory-history.ts";
+import extension from "../../../extensions/memory-history/extension.ts";
 it("registers memory tool and requests visible lookup without duplicate guidance",()=>{
  const hooks=new Map();const tools:any[]=[];
  extension({on:(n:string,h:any)=>hooks.set(n,h),registerTool:(t:any)=>tools.push(t),registerCommand(){},getActiveTools:()=>["memory_history"]});

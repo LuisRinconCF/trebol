@@ -83,7 +83,7 @@ session file. The invariant is that Pi is not also listed in
 
 ## Ripple analysis
 
-- The loader fix affects only `.pi/extensions/50-ui/swarm-btw.ts` and the side
+- The loader fix affects only `extensions/swarm-btw/extension.ts` and the side
   session's prompt construction.
 - The Pi extension install affects global Pi state, not repository source.
 - tmux configuration affects all tmux sessions, so additions must be isolated,

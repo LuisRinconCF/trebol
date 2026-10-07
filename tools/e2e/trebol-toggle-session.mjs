@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
-import {createAgentSession,DefaultResourceLoader,SessionManager,SettingsManager} from '/usr/lib/node_modules/@earendil-works/pi-coding-agent/dist/index.js';
+import {resolvePiHost} from '../install/pi-host.mjs';
+const {createAgentSession,DefaultResourceLoader,SessionManager,SettingsManager} = await import(resolvePiHost({executable:process.env.PI_EXECUTABLE}).sdkUrl);
 import {mkdtempSync,mkdirSync,rmSync} from 'node:fs'; import {tmpdir} from 'node:os';import {join} from 'node:path';
 const dir=mkdtempSync(join(tmpdir(),'trebol-probe-'));const agentDir=join(dir,'agent');mkdirSync(agentDir);
 const repo=new URL('../..',import.meta.url).pathname; const settings=SettingsManager.create(dir,agentDir);
-const loader=new DefaultResourceLoader({cwd:dir,agentDir,settingsManager:settings,noExtensions:true,noSkills:true,noThemes:true,noContextFiles:true,noPromptTemplates:true,additionalExtensionPaths:[join(repo,'.pi/extensions/trebol-loader.ts'),join(repo,'.pi/extensions/10-context/.trebol-guards/07-swarm-thinking.ts')]});
+const loader=new DefaultResourceLoader({cwd:dir,agentDir,settingsManager:settings,noExtensions:true,noSkills:true,noThemes:true,noContextFiles:true,noPromptTemplates:true,additionalExtensionPaths:[join(repo,'extensions/trebol-toggle/index.ts'),join(repo,'extensions/swarm-thinking/index.ts')]});
 await loader.reload();assert.deepEqual(loader.getExtensions().errors,[]);
 const {session}=await createAgentSession({cwd:dir,agentDir,settingsManager:settings,resourceLoader:loader,sessionManager:SessionManager.inMemory(dir)});
 await session.bindExtensions({commandContextActions:{reload:()=>session.reload()},onError:e=>console.log('ERROR',e)});

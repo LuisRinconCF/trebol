@@ -16,6 +16,7 @@ import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { inspectPackageSources } from "./package-sources.mjs";
 
 const args = process.argv.slice(2);
 const opt = (name, fallback) => { const i = args.indexOf(name); return i === -1 ? fallback : args[i + 1]; };
@@ -25,9 +26,9 @@ const AGENT_DIR = resolve(opt("--agent-dir", join(process.env.PI_CODING_AGENT_DI
 const MIN_NODE = 22;
 const MIN_PI = [0, 85, 0];
 /** Bare imports the extensions need at runtime (rg over .pi and the package src trees). */
-const RUNTIME_DEPS = ["typescript", "effect", "absurd-sdk", "croner", "acorn", "yaml", "@pi-swarm/core", "@pi-swarm/runtime-contracts"];
+const RUNTIME_DEPS = ["re2-wasm", "mermaid", "typescript", "absurd-sdk", "croner", "yaml", "@pi-swarm/core", "@pi-swarm/runtime-contracts"];
 /** Packages consumed from dist/ at runtime; built by the root `prepare` script. */
-const DIST_PACKAGES = ["packages/runtime/core", "packages/runtime/runtime-contracts"];
+const DIST_PACKAGES = ["packages/runtime/core", "packages/runtime/runtime-contracts", "packages/runtime/bootstrap"];
 
 const results = [];
 const report = (name, ok, detail, fix) => { results.push({ name, ok, detail, fix }); };
@@ -76,7 +77,7 @@ function checkRuntimeDeps() {
 
 // 4. no runtime import crosses into vendor/ (the installer never initialises submodules).
 function checkVendorFree() {
-  const fork = join(REPO, ".pi", "extensions", "30-tools", "ask-user", "index.ts");
+  const fork = join(REPO, "extensions", "ask-user", "extension.ts");
   report("ask_user_question is in-tree (not vendor/)", existsSync(fork), fork, "the fork is missing; update the checkout");
 }
 
@@ -104,9 +105,17 @@ function checkSettings() {
     const file = join(REPO, ".pi", "themes", `${theme}.json`);
     report(`theme ${theme} shipped by this checkout`, existsSync(file), file, "pick a theme from .pi/themes or install this repo as a package so its themes load");
   } else report("theme", true, theme ? `${theme} (not a swarm-* theme)` : "default");
-  const packages = (settings.packages ?? []).map((p) => (typeof p === "string" ? p : p?.source ?? "")).filter(Boolean);
-  const listed = packages.some((p) => resolve(dirname(path), p) === REPO || p === REPO || /pi-swarm|swarm-pi|trebol/i.test(p));
-  report("this checkout is in settings.packages", listed, listed ? packages.find((p) => resolve(dirname(path), p) === REPO || /pi-swarm|swarm-pi|trebol/i.test(p)) : `packages: ${packages.length ? packages.join(", ") : "(none)"}`, `pi install ${REPO}   # or pi install git:github.com/cloverinternational/trebol@<tag>`);
+  const { local, competing } = inspectPackageSources(settings.packages, path, REPO);
+  const installedClone = competing.some((source) => {
+    const match = source.match(/^(?:git:|https:\/\/|ssh:\/\/)(github\.com)[/:](cloverinternational\/[^@]+?)(?:\.git)?(?:@[^/]+)?$/i);
+    return match && resolve(AGENT_DIR, "git", match[1], match[2]) === REPO;
+  });
+  report("this checkout is in settings.packages", local.length > 0 || (installedClone && competing.length === 1),
+    local[0] ?? (installedClone ? competing[0] : "no exact local checkout registration"),
+    `pi install ${REPO}`);
+  report("no competing Trebol Git install", installedClone || competing.length === 0,
+    competing.length ? competing.join(", ") : "none",
+    "when working in this checkout, remove the old Git package registration with `pi remove <source>` and keep the local-path package; different paths register tools twice");
 }
 
 checkToolchain();

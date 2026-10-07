@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import extension from "../../extensions/30-tools/swarm-websearch.ts";
+import extension from "../../../extensions/swarm-websearch/extension.ts";
 
 const roots: string[] = [];
 afterEach(() => { for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true }); delete process.env.PI_SWARM_WEBSEARCH_CONFIG; delete process.env.TEST_MCP_TOKEN; vi.restoreAllMocks(); });

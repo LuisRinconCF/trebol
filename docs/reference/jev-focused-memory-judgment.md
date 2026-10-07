@@ -24,7 +24,7 @@ MCP claims. Credential inventory is not appropriate default project memory.
    this to a claim about every upstream Pi build.
 3. /btw supplies appendSystemPrompt as an array of existing prompt+SIDE_PROMPT,
    filtering absent entries. Source3c2b2569; verified against
-   .pi/extensions/50-ui/swarm-btw.ts:45.
+   extensions/swarm-btw/extension.ts:45.
 
 All three were written to isolated staging by the parent after reading code,
 then retrieved with actual recallKnowledge project queries. Exact record IDs,

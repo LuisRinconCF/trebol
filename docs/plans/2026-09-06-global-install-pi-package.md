@@ -133,7 +133,7 @@ FAIL:
    (otherwise "run `npm install`").
 3. `import()` of every runtime bare dep from the repo root: `effect`,
    `absurd-sdk`, `croner`, `acorn`, `yaml`, `typescript` (Mac item 3).
-4. `.pi/extensions/30-tools/ask-user/index.ts` present and `vendor/` not
+4. `extensions/ask-user/extension.ts` present and `vendor/` not
    required at runtime (`rg`-free: checks the one path).
 5. `~/.pi/agent/models.json`: every model has `maxTokens > 0` and a
    `contextWindow` (Mac item 5); reports provider/model ids only.

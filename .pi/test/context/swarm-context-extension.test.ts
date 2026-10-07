@@ -2,8 +2,8 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import swarmContextExtension from "../../extensions/10-context/swarm-context.ts";
-import { footerSegments } from "../../extensions/50-ui/conversation-metrics.ts";
+import swarmContextExtension from "../../../extensions/swarm-context/extension.ts";
+import { footerSegments } from "../../../extensions/conversation-metrics/extension.ts";
 import { startupNotices } from "../../lib/ui/startup-notices.ts";
 
 function harness(cwd: string, options: { models?: string[]; retriever?: (task: string) => string } = {}) {

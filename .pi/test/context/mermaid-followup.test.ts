@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import register from "../../extensions/10-context/mermaid-response.ts";
+import register from "../../../extensions/mermaid-response/extension.ts";
 import { hasMermaidDiagram, wantsMermaidExplanation } from "../../lib/context/mermaid-followup.ts";
 
 const explanation = "The tool first checks the focused task and then checks the skill budget. If the budget is exhausted, the call is blocked before execution; invoking Skill is how work resumes.";
@@ -33,7 +33,7 @@ describe("missing-Mermaid follow-up", () => {
     expect(h.sent).toHaveLength(1);
     expect(h.sent[0][0]).toMatchObject({ customType: "pi-swarm-mermaid-followup", display: false });
     expect(h.sent[0][0].content).toContain("Do not claim the previous reply was replaced");
-    expect(h.sent[0][0].content).toContain("use available read tools to inspect .pi/extensions/10-context/mermaid-response.ts");
+    expect(h.sent[0][0].content).toContain("use available read tools to inspect extensions/mermaid-response/extension.ts");
     expect(h.sent[0][0].content).toContain("Do not draw a speculative diagram of unknown implementation");
     expect(h.sent[0][1]).toEqual({ deliverAs: "followUp", triggerTurn: true });
     expect(message.content[0].text).toBe(explanation);

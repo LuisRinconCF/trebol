@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFile } from "node:child_process";
-import extension from "../../extensions/40-state/candidate-memory-review.ts";
+import extension from "../../../extensions/candidate-memory-review/extension.ts";
 import { openKnowledgeStore } from "../../lib/state/knowledge-store.ts";
 import { consultWithPi } from "../../lib/context/context-consult.ts";
 import { recallKnowledge } from "../../lib/context/knowledge-recall.ts";

@@ -4,7 +4,7 @@
 import {existsSync,readFileSync} from 'node:fs';
 import {spawn} from 'node:child_process';
 import {join} from 'node:path';
-import memoryHistoryExtension from '../../../.pi/extensions/40-state/memory-history.ts';
+import memoryHistoryExtension from '../../../extensions/memory-history/extension.ts';
 
 const cwd=process.cwd(),hooks=new Map(),tools=new Map(),traces=[];
 const pi={on:(name,handler)=>hooks.set(name,handler),registerTool:tool=>tools.set(tool.name,tool),exec:(command,args,opts)=>new Promise((resolve,reject)=>{

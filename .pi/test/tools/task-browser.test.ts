@@ -1,5 +1,5 @@
 import {it,expect} from 'vitest';
-import {TaskBrowserView} from '../../extensions/30-tools/task-browser.ts';
+import {TaskBrowserView} from '../../../extensions/task-browser/extension.ts';
 import {taskWidgetRenderer} from '../../../packages/tools/taskmanage/src/task-manage.ts';
 it('does not grow with a hundred unfocused tasks',()=>{const tasks=Array.from({length:100},(_,i)=>({id:String(i),subject:'Work',status:'pending',dependsOn:[]}));expect(taskWidgetRenderer(tasks as any,{}).render(80)).toHaveLength(3);});
 it('closes immediately on Escape from every view',()=>{

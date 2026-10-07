@@ -3,7 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import enrichment, { ENRICHMENT_ENTRY } from "../../extensions/40-state/knowledge-enrichment.ts";
+import enrichment, { ENRICHMENT_ENTRY } from "../../../extensions/knowledge-enrichment/extension.ts";
 import { openKnowledgeStore } from "../../lib/state/knowledge-store.ts";
 
 const original = { root: process.env.PI_SWARM_MEMORY_DIR, capture: process.env.PI_SWARM_MEMORY_CAPTURE, child: process.env.PI_SWARM_SUBAGENT };
@@ -20,7 +20,7 @@ function harness(exec?: (...args: any[]) => Promise<any>) {
   const entries: any[] = [{ id: "u1", type: "message", message: { role: "user", content: "Project Orion uses SQLite." } }];
   const handlers = new Map<string, any>(), commands = new Map<string, any>();
   const execute = vi.fn(exec ?? (async () => ({ code: 0, stdout: JSON.stringify({ candidates: [{ title: "Storage", text: "Orion uses SQLite.", evidenceIds: ["u1"], scope: "repository" }] }) })));
-  const pi = { exec: execute, on: (name: string, fn: any) => handlers.set(name, fn), registerCommand: (name: string, spec: any) => commands.set(name, spec), appendEntry: (customType: string, data: any) => entries.push({ id: `c${entries.length}`, type: "custom", customType, data }) };
+  const pi = { exec: execute, on: (name: string, fn: any) => { const previous = handlers.get(name); handlers.set(name, async (...args: any[]) => { await previous?.(...args); return fn(...args); }); }, registerCommand: (name: string, spec: any) => commands.set(name, spec), appendEntry: (customType: string, data: any) => entries.push({ id: `c${entries.length}`, type: "custom", customType, data }) };
   enrichment(pi); enrichment(pi);
   const ctx = { cwd: root, model: { provider: "test", id: "model" }, sessionManager: { getBranch: () => entries, getSessionFile: () => join(root, "session.jsonl") }, ui: { notify: vi.fn() } };
   handlers.get("session_start")({}, ctx);
@@ -44,7 +44,7 @@ it("leaves failed extraction retryable and advances on an honest no-write result
 it("cancels stale work without writes and suppresses nested capture", async () => {
   let finish!: (result: any) => void;
   const h = harness(() => new Promise(resolve => { finish = resolve; }));
-  const pending = h.run(); h.handlers.get("session_shutdown")();
+  const pending = h.run(); await h.handlers.get("session_shutdown")();
   finish({ code: 0, stdout: '{"candidates":[]}' }); await pending;
   expect(h.entries).toHaveLength(1);
   expect(h.execute.mock.calls[0][2].signal.aborted).toBe(true);

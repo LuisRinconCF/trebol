@@ -8,7 +8,7 @@ import { pathToFileURL } from 'node:url';
 
 const root = mkdtempSync(join(tmpdir(), 'pi-swarm-memory-eight-'));
 process.env.PI_SWARM_MEMORY_DIR = join(root, 'store');
-const { default: extension } = await import(pathToFileURL(join(process.cwd(), '.pi/extensions/40-state/memory-history.ts')));
+const { default: extension } = await import(pathToFileURL(join(process.cwd(), 'extensions/memory-history/extension.ts')));
 const registered = new Map(), hooks = new Map();
 extension({ registerTool: t => registered.set(t.name, t), on: (name, fn) => hooks.set(name, fn), getActiveTools: () => ['memory_history'] });
 const tool = registered.get('memory_history');

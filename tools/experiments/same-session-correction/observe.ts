@@ -1,7 +1,7 @@
 import { appendFileSync } from "node:fs";
-import { registerAutoSkillsExtension } from "../../../.pi/extensions/10-context/autogenskills.ts";
-import { registerSwarmBash } from "../../../.pi/extensions/30-tools/swarm-bash.ts";
-import metrics from "../../../.pi/extensions/50-ui/conversation-metrics.ts";
+import { registerAutoSkillsExtension } from "../../../extensions/autogenskills/extension.ts";
+import { registerSwarmBash } from "../../../extensions/swarm-bash/extension.ts";
+import metrics from "../../../extensions/conversation-metrics/extension.ts";
 
 /** Instrument actual production tools; low configured budget, no fake block/state. */
 export default function (pi: any) {

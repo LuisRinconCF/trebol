@@ -10,7 +10,7 @@
 
 ## Contract and safety
 
-The live results match `.pi/extensions/40-state/memory-history.ts#L177-L188` and `.pi/lib/context/memory-agent.ts#L47-L84`: validated limit, topical default or explicit task mode, bounded read-only selection, and distinct `ok`/`no-result` outputs. The worker only exposes snapshot-backed browse/read/select (`.pi/lib/state/memory-retrieval-worker.ts#L12-L34`). After the calls, direct store inspection showed the target Q&A still candidate at the same revision and the PageIndex decision still verified at its same revision. This is evidence for those two records, not a universal no-mutation proof.
+The live results match `extensions/memory-history/extension.ts#L177-L188` and `.pi/lib/context/memory-agent.ts#L47-L84`: validated limit, topical default or explicit task mode, bounded read-only selection, and distinct `ok`/`no-result` outputs. The worker only exposes snapshot-backed browse/read/select (`.pi/lib/state/memory-retrieval-worker.ts#L12-L34`). After the calls, direct store inspection showed the target Q&A still candidate at the same revision and the PageIndex decision still verified at its same revision. This is evidence for those two records, not a universal no-mutation proof.
 
 I did not trigger a live model timeout, unavailable provider, abort, malformed selection, or cross-project scope attempt. Their code paths exist but their live behavior is untested in this recheck. The tool returns no child-call transcript, so I can judge selected content and status, not every internal browse/read action.
 
